@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include "constants.h"
 #include <ctype.h>
+#include "linked_list.h"
+#include "constants.h"
 
 int check_line_type(char *line)
 {
@@ -21,10 +22,11 @@ int check_line_type(char *line)
 
 int read_file_and_validate_file(char *file_name)
 {
-    lines = [];
+    struct Node *head = NULL;
+
     FILE *file;
     char line[MAX_LENGTH];
-
+    int line_type;
     file = fopen(file_name, "r");
     if (file == NULL)
     {
@@ -35,9 +37,15 @@ int read_file_and_validate_file(char *file_name)
     // Read the file line by line
     while (fgets(line, sizeof(line), file) != NULL)
     {
-        int line_type = check_line_type(line);
-        if (line_type == 0)
+        line_type = check_line_type(line);
+        switch (line_type)
         {
+        case EMPTY_LINE_CODE:
+        case COMMENT_LINE_CODE:
+            line ='';
+            break;
+        case MACRO_LINE_CODE:
+            handle_macro();
         }
     }
 
