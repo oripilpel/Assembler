@@ -1,0 +1,10 @@
+              some text
+mcro m1
+line1
+line2
+endmcro
+
+m1
+yosef
+m1
+osf

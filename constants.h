@@ -1,8 +1,11 @@
-#ifndef CONSTANTS_H
+#ifndef ASSEMBLER_CONSTANTS_H
+#define ASSEMBLER_CONSTANTS_H
 
-#define MAX_LENGTH 81
-#define EMPTY_LINE_CODE 1
-#define COMMENT_LINE_CODE 2
-#define MACRO_LINE_CODE 3
+#define MAX_LINE_LENGTH 81
+#define MAX_FILE_NAME_LENGTH 50
+#define OFF 0
+#define ON 1
+#define ERROR_CODE -1
+#define NO_ERROR_CODE 0
 
 #endif
