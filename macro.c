@@ -1,6 +1,6 @@
 #include "constants.h"
 #include "stdlib.h"
-#include "stdio.h"
+#include <stdio.h>
 #include "string.h"
 
 
@@ -26,11 +26,11 @@ LineNode *create_node(char *line) {
     char *line_copy = (char *) malloc(MAX_LINE_LENGTH * sizeof(char));
     LineNode *new_node;
     strcpy(line_copy, line);
-    if (!*line_copy) {
+    new_node = (LineNode *) malloc(sizeof(LineNode));
+    if (!*line_copy||!new_node) {
         fprintf(stderr, "Fatal: failed to allocate required space");
         exit(1);
     }
-    new_node = (LineNode *) malloc(sizeof(LineNode));
     if (new_node != NULL) {
         new_node->line = line_copy;
         new_node->next = NULL;
@@ -67,9 +67,6 @@ void append_macro_to_list_start(MacroList *list, Macro *new_node) {
 void append_line_to_list(Macro *macro, char *line) {
     LineNode *current = macro->lines_head;
     LineNode *new_node = create_node(line);
-    if (!new_node) {
-        exit(1);
-    }
     if (!macro->lines_head) {
         macro->lines_head = new_node;
         macro->lines_head->next = NULL;
@@ -93,4 +90,23 @@ Macro *find_macro_in_list(MacroList *list, const char *name) {
         current = (Macro *) current->next;
     }
     return NULL;
+}
+
+/* free all macros in list */
+void free_macros(MacroList *list) {
+    Macro *next_macro;
+    LineNode *next_line;
+    Macro *current_macro = list->head;
+    LineNode *current_line = current_macro->lines_head;
+    while (current_macro) {
+        while(current_line){
+            next_line=current_line->next;
+            free(current_line);
+            current_line=next_line;
+        }
+        next_macro=(Macro *)current_macro->next;
+        free(current_macro);
+        current_macro=(Macro *)next_macro;
+    }
+    free(list);
 }

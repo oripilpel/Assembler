@@ -7,5 +7,6 @@
 #define ON 1
 #define ERROR_CODE -1
 #define NO_ERROR_CODE 0
+#define MAX_LABEL_LENGTH 31
 
 #endif

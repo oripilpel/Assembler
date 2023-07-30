@@ -84,7 +84,7 @@ int is_all_space(char *start) {
     return 1;
 }
 
-int first_read(char *filename) {
+int macro_expansion(char *filename) {
     int is_macro = OFF;
     char *first_word;
     Macro *current_macro;
@@ -99,9 +99,9 @@ int first_read(char *filename) {
         exit(1);
     }
     strcpy(input_filename_with_ext, filename);
-    strcat(input_filename_with_ext, ".txt");
+    strcat(input_filename_with_ext, ".as");
     strcpy(output_filename_with_ext, filename);
-    strcat(output_filename_with_ext, ".out");
+    strcat(output_filename_with_ext, ".am");
 
     input = fopen(input_filename_with_ext, "r");
     if (input == NULL) {
@@ -154,10 +154,16 @@ int first_read(char *filename) {
     }
     fclose(input);
     fclose(output);
+    free_macros(list);
+    free(input_filename_with_ext);
+    free(output_filename_with_ext);
+    free(first_word);
+    free(line);
+    free(current_macro);
     return NO_ERROR_CODE;
 }
 
-int main() {
-    first_read("file");
-    return 0;
+int labels_handling(char *filename){
+
+    return NO_ERROR_CODE;
 }
