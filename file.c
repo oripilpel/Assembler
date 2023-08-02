@@ -3,10 +3,10 @@
 #include <ctype.h>
 #include <string.h>
 #include "constants.h"
-
+#include "label.h"
 #include "macro.h"
 
-
+/* returns a pointer to the nth word in a line or null if not found */
 char *get_nth_word(char *line, int n) {
     char *word_start;
     int word_count = 0;
@@ -63,6 +63,7 @@ char *get_nth_word(char *line, int n) {
     return NULL;
 }
 
+/* write macro into a file */
 void write_macro(FILE *file, Macro *macro) {
     LineNode *curr_line = macro->lines_head;
     while (curr_line) {
@@ -71,6 +72,7 @@ void write_macro(FILE *file, Macro *macro) {
     }
 }
 
+/* returns 1 if all the line is space else 0 */
 int is_all_space(char *start) {
     if (start == NULL) {
         return 1;
@@ -84,6 +86,7 @@ int is_all_space(char *start) {
     return 1;
 }
 
+/* expanding all macros in filename.as into filename.am */
 int macro_expansion(char *filename) {
     int is_macro = OFF;
     char *first_word;
@@ -158,12 +161,51 @@ int macro_expansion(char *filename) {
     free(input_filename_with_ext);
     free(output_filename_with_ext);
     free(first_word);
-    free(line);
     free(current_macro);
     return NO_ERROR_CODE;
 }
 
-int labels_handling(char *filename){
+/*  */
+int first_run(char *filename) {
+    label_defining = OFF;
+    int line_number = 1;
+    int error_count = 0;
+    LabelTable *table = NULL;
+    Label *current = NULL;
+    int DC = 0;
+    int IC = 0;
+    FILE *input;
+    char *input_filename_with_ext = (char *) malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
+    strcpy(input_filename_with_ext, filename);
+    strcat(input_filename_with_ext, ".am");
+    if (!input_filename_with_ext) {
+        fprintf(stderr, "Fatal: failed to allocate required space for input_filename_with_ext");
+        exit(1);
+    }
+    input = fopen(input_filename_with_ext, "r");
+    while (fgets(line, MAX_LINE_LENGTH, input) != NULL) {
+        if (is_label(get_nth_word(line, 1))) {
+            label_defining = ON;
+            if (is_data_storing(get_nth_word(line, 2))) { /* handle data storing label */
+                current = init_label(get_nth_word(line, 1), get_nth_word(line, 3));
+                if (!current)continue; /* got NULL because it had an error */
+                current->number = DC;
+                DC += get_data_length(data); /* update the value of data counter by current label's data length  */
+                current->data_flag = ON;
+                if (!table) {
+                    table = init_table(current);
+                } else {
+                    append_label_to_table(current, table);
+                }
+            }
+        }
+        if (is_entry_or_extern(get_nth_word(1))) {
+            if (!strcmp(word, ".entry")) { /* is entry line */
 
+                current = init_label()
+            }
+        }
+        line_number++;
+    }
     return NO_ERROR_CODE;
 }

@@ -8,5 +8,7 @@
 #define ERROR_CODE -1
 #define NO_ERROR_CODE 0
 #define MAX_LABEL_LENGTH 31
+#define STRING_DATA_TYPE 2
+#define DATA_DATA_TYPE 3
 
 #endif
