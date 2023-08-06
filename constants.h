@@ -10,5 +10,6 @@
 #define MAX_LABEL_LENGTH 31
 #define STRING_DATA_TYPE 2
 #define DATA_DATA_TYPE 3
+#define NONE 0
 
 #endif

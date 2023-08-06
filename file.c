@@ -6,6 +6,16 @@
 #include "label.h"
 #include "macro.h"
 
+/* return if current word is .data or .string */
+int is_data_storing(char *word) {
+    return !strcmp(word, ".data") || !strcmp(word, ".string");
+}
+
+/* return if current word is .entry or .extern */
+int is_entry_or_extern(char *word) {
+    return !strcmp(word, ".entry") || !strcmp(word, ".extern");
+}
+
 /* returns a pointer to the nth word in a line or null if not found */
 char *get_nth_word(char *line, int n) {
     char *word_start;
@@ -92,9 +102,9 @@ int macro_expansion(char *filename) {
     char *first_word;
     Macro *current_macro;
     MacroList *list = NULL;
-    char line[MAX_LINE_LENGTH];
     FILE *input;
     FILE *output = NULL;
+    char *line = (char *) malloc(MAX_LINE_LENGTH * sizeof(char));
     char *input_filename_with_ext = (char *) malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     char *output_filename_with_ext = (char *) malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     if (!input_filename_with_ext || !output_filename_with_ext) {
@@ -114,7 +124,8 @@ int macro_expansion(char *filename) {
 
     while (fgets(line, MAX_LINE_LENGTH, input) != NULL) {
         /* the whole line is space or is a comment line */
-        if (is_all_space(line) || !strncmp(line, ";", 1))continue;
+        if (is_all_space(line) || !strncmp(line, ";", 1))
+            continue;
         /* open the file only once and only if there is a line that is not only space */
         if (!output) {
             output = fopen(output_filename_with_ext, "w");
@@ -167,14 +178,17 @@ int macro_expansion(char *filename) {
 
 /*  */
 int first_run(char *filename) {
-    label_defining = OFF;
+    int data_type,data_valid;
+    int num_of_extern_names = 0;
+    int nth_extern_name = 1;
     int line_number = 1;
-    int error_count = 0;
+    int errors_count = 0;
     LabelTable *table = NULL;
-    Label *current = NULL;
+    Label *current_label = NULL;
     int DC = 0;
     int IC = 0;
     FILE *input;
+    char *line = (char *) malloc(MAX_LINE_LENGTH * sizeof(char));
     char *input_filename_with_ext = (char *) malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     strcpy(input_filename_with_ext, filename);
     strcat(input_filename_with_ext, ".am");
@@ -184,25 +198,64 @@ int first_run(char *filename) {
     }
     input = fopen(input_filename_with_ext, "r");
     while (fgets(line, MAX_LINE_LENGTH, input) != NULL) {
-        if (is_label(get_nth_word(line, 1))) {
-            label_defining = ON;
+        if (is_label(get_nth_word(line, 1))) { /* first word us label */
             if (is_data_storing(get_nth_word(line, 2))) { /* handle data storing label */
-                current = init_label(get_nth_word(line, 1), get_nth_word(line, 3));
-                if (!current)continue; /* got NULL because it had an error */
-                current->number = DC;
-                DC += get_data_length(data); /* update the value of data counter by current label's data length  */
-                current->data_flag = ON;
-                if (!table) {
-                    table = init_table(current);
-                } else {
-                    append_label_to_table(current, table);
+                data_type = !strcmp(get_nth_word(line, 2), ".data") ? DATA_DATA_TYPE
+                                                                    : STRING_DATA_TYPE; /* only one of two data or string type */
+                current_label = init_label(get_nth_word(line, 1), get_nth_word(line, 3), data_type);
+                if (current_label) {
+                    current_label->value = DC;
+                    DC += get_data_length(get_nth_word(line,
+                                                       3),data_type); /* update the value of data counter by current label's data length  */
+                    current_label->data_flag = ON;
+                    if (!table) {
+                        table = init_table(current_label);
+                    } else {
+                        append_label_to_table(current_label, table);
+                    }
                 }
             }
-        }
-        if (is_entry_or_extern(get_nth_word(1))) {
-            if (!strcmp(word, ".entry")) { /* is entry line */
-
-                current = init_label()
+            if (is_entry_or_extern(get_nth_word(line, 2))) {
+                if (is_entry_or_extern(get_nth_word(line, 2))) {
+                    if (!strcmp(get_nth_word(line, 2), ".entry")) { /* is entry line */
+                        current_label = find_label(get_nth_word(line, 3), table);
+                        if (!current_label) {
+                            printf("no label found with the name : '%s'", get_nth_word(line, 3));
+                        } else if (current_label->external_flag) {
+                            printf("ERROR : label '%s' can't be both external and entry", get_nth_word(line, 3));
+                        } else {
+                            current_label->entry_flag = ON;
+                        }
+                    } else { /* is extern line */
+                        define_extern_labels(get_nth_word(line, 3), table,&DC);
+                    }
+                }
+            }
+        } else { /* doesn't start with label name */
+            if(is_data_storing(get_nth_word(line,1))){
+                data_type = !strcmp(get_nth_word(line, 2), ".data") ? DATA_DATA_TYPE
+                                                                    : STRING_DATA_TYPE; /* only one of two data or string type */
+                data_valid=validate_data_by_type(get_nth_word(line,2),data_type);
+                if(!data_valid){
+                    printf("invalid data in line %d\n",line_number);
+                    errors_count++;
+                }else{
+                    DC+=get_data_length(get_nth_word(line, 2),data_type);
+                }
+            }
+           else if (is_entry_or_extern(get_nth_word(line, 1))) {
+                if (!strcmp(get_nth_word(line, 1), ".entry")) { /* is entry line */
+                    current_label = find_label(get_nth_word(line, 2), table);
+                    if (!current_label) {
+                        printf("no label found with the name : '%s'", get_nth_word(line, 2));
+                    } else if (current_label->external_flag) {
+                        printf("ERROR : label '%s' can't be both external and entry", get_nth_word(line, 2));
+                    } else {
+                        current_label->entry_flag = ON;
+                    }
+                } else { /* is extern line */
+                    define_extern_labels(get_nth_word(line, 2), table);
+                }
             }
         }
         line_number++;

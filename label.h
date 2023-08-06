@@ -5,7 +5,7 @@
 typedef struct Label {
     struct Label *next;
     char *name;
-    int number;
+    int value;
     int data_flag;
     int code_flag;
     int external_flag;
@@ -16,20 +16,20 @@ typedef struct LabelTable {
     Label *head;
 } LabelTable;
 
-int validate_label_data_by_type(char *name, int data_type, char *data);
+int validate_data_by_type(int data_type, char *data) ;
 
-Label *init_label(char *name, char *data);
+Label *init_label(char *name, char *data, int data_type);
 
 int is_label(char *word);
 
-int get_data_length(char *data);
+Label *find_label(char *name, LabelTable *table);
 
-int is_data_storing(char *word);
+int get_data_length(char *data,int data_type);
 
 LabelTable *init_table(Label *head);
 
-void append_label_to_table(Label *label, LabelTable *table);
+void define_extern_labels(char *names, LabelTable *table);
 
-int is_entry_or_extern(char *word);
+void append_label_to_table(Label *label, LabelTable *table);
 
 #endif

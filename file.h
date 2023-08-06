@@ -1,6 +1,9 @@
 #ifndef ASSEMBLER_FILE_H
 #define ASSEMBLER_FILE_H
 
+#include "macro.h"
+#include <stdio.h>
+
 char *get_nth_word(char *line, int n);
 
 void write_macro(FILE *file, Macro *macro);
