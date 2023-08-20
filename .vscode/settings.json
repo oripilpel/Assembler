@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "utils.h": "c",
+        "constants.h": "c",
+        "stdlib.h": "c",
+        "ctype.h": "c",
+        "label.h": "c",
+        "string.h": "c",
+        "stdio.h": "c",
+        "operation.h": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}

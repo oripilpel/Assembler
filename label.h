@@ -2,33 +2,36 @@
 #ifndef ASSEMBLER_LABEL_H
 #define ASSEMBLER_LABEL_H
 
-typedef struct Label {
+typedef struct Label
+{
     struct Label *next;
-    char *name;
-    int value;
-    int data_flag;
-    int code_flag;
-    int external_flag;
-    int entry_flag;
+    char *name;               /* label name */
+    int value;                /* label address in memory */
+    int data_flag;            /* if it contains data it's 1 else 0 */
+    int code_flag;            /* if it contains instruction it's 1 else 0 */
+    int external_flag;        /* if it external label it's 1 else 0 */
+    int entry_flag;           /* if it external label it's 1 else 0 */
+    Instruction *instruction; /* if it has code flag it's the instruction  */
 } Label;
 
-typedef struct LabelTable {
-    Label *head;
+typedef struct LabelTable
+{
+    Label *head; /* the first instruction in linked list */
 } LabelTable;
 
-int validate_data_by_type(int data_type, char *data) ;
+int validate_label_name(char *name);
 
-Label *init_label(char *name, char *data, int data_type);
+int validate_data_by_type(int data_type, char *data);
+
+Label *init_label(char *name);
 
 int is_label(char *word);
 
 Label *find_label(char *name, LabelTable *table);
 
-int get_data_length(char *data,int data_type);
-
 LabelTable *init_table(Label *head);
 
-void define_extern_labels(char *names, LabelTable *table);
+int define_extern_labels(char *names, LabelTable *table);
 
 void append_label_to_table(Label *label, LabelTable *table);
 

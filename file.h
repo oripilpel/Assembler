@@ -12,4 +12,6 @@ int is_all_space(char *start);
 
 int macro_expansion(char *filename);
 
+int second_run(char *filename);
+
 #endif

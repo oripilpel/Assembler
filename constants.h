@@ -11,5 +11,16 @@
 #define STRING_DATA_TYPE 2
 #define DATA_DATA_TYPE 3
 #define NONE 0
+#define INVALID 0
+#define VALID 1
+#define REGISTER_TYPE 100
+#define IMMEDIATE_TYPE 1
+#define LABEL_TYPE 10
+#define MAX_NUM_VALUE_OPERATION 511
+#define MIN_NUM_VALUE_OPERATION -512
+#define MAX_NUM_VALUE 2047
+#define MIN_NUM_VALUE -2048
+#define SOURCE 1
+#define DEST 2
 
 #endif
