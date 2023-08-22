@@ -24,8 +24,6 @@ Macro *init_macro(char *name);
 
 MacroList *init_macro_list(Macro *head);
 
-void append_macro_to_list(MacroList *list, Macro *new_node);
-
 void append_line_to_list(Macro *head, char *line);
 
 Macro *find_macro_in_list(MacroList *list, char *name);

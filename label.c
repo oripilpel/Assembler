@@ -3,11 +3,25 @@
 #include <ctype.h>
 #include <string.h>
 #include "constants.h"
-#include "operation.h"
+
+typedef struct Instruction
+{
+    struct Instruction *next;
+    int value;
+    char *opname;
+    char *source_operand;
+    char *dest_operand;
+    char *opcode;
+    int source_value;
+    int dest_value;
+    int source_type;
+    int dest_type;
+} Instruction;
 
 typedef struct Label
 {
     struct Label *next;
+    char *data;
     char *name;
     int value;
     int data_flag;
@@ -30,6 +44,7 @@ int is_label(char *word)
 void free_label(Label *label)
 {
     free(label->name);
+    free(label->data);
     free(label);
 }
 
@@ -145,14 +160,15 @@ Label *init_label(char *name)
         free(name_copy);
         return NULL; /* return the label only if it's valid */
     }
-    inst->inst->name = name_copy;
+    inst->name = name_copy;
     inst->code_flag = OFF;
     inst->entry_flag = OFF;
     inst->external_flag = OFF;
     inst->data_flag = OFF;
     inst->next = NULL;
     inst->instruction = NULL;
-    inst->value = NULL;
+    inst->data = NULL;
+    inst->value = OFF;
     return inst;
 }
 

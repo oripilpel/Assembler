@@ -13,7 +13,12 @@
         "functional": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "macro.h": "c",
+        "string_view": "c",
+        "numbers": "c",
+        "file.h": "c",
+        "typeinfo": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

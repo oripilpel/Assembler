@@ -29,7 +29,7 @@ int macro_expansion(char *filename)
     FILE *input;
     FILE *output = NULL;
     char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
-    char *filename = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
+    char *input_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     char *output_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     if (!input_filename_with_ext || !output_filename_with_ext)
     {
@@ -118,202 +118,8 @@ int macro_expansion(char *filename)
     return NO_ERROR_CODE;
 }
 
-/* first run through the file all the instructions and labels validate them by schema provided */
-int first_run(char *filename)
-{
-    int data_type, data_valid = INVALID, is_label_defining = OFF;
-    int line_number = 1;
-    int errors_count = 0;
-    Word *curr_word;
-    Word *label_word;
-    InstructionTable *inst_table;
-    Instruction *inst;
-    LabelTable *table = NULL;
-    Label *current_label = NULL;
-    int DC = 0;
-    int L = 0;
-    int IC = 100;
-    FILE *input;
-    char *data, *curr_num;
-    char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
-    char *input_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
-    strcpy(input_filename_with_ext, filename);
-    strcat(input_filename_with_ext, ".am");
-    if (!input_filename_with_ext)
-    {
-        printf("Fatal: failed to allocate required space for input_filename_with_ext\n");
-        return ERROR_CODE;
-    }
-    input = fopen(input_filename_with_ext, "r");
-    while (fgets(line, MAX_LINE_LENGTH, input) != NULL)
-    {
-        curr_word = get_next_word(line, 0);
-        if (is_label(curr_word->str))
-        { /* label defining */
-            is_label_defining = ON;
-            curr_word = get_next_word(line, curr_word->end_idx);
-        }
-        if (is_data_storing(curr_word->str))
-        { /* storing data */
-            if (is_label_defining)
-            {
-                data_type = !strcmp(curr_word->str, ".data") ? DATA_DATA_TYPE : STRING_DATA_TYPE; /* could be only one of those two */
-                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
-                strcpy(data, line + curr_word->end_idx + 1);
-                data_valid = data_type == DATA_DATA_TYPE ? validate_numbers(data) : validate_string_data(data);
-
-                if (!data_valid)
-                {
-                    errors_count++;
-                    printf("ERROR - data invalid in line %d\n", line_number);
-                }
-                else
-                { /* valid data */
-                    current_label = init_label(get_next_word(line, 0)->str);
-                    if (!current_label)
-                    {
-                        printf("ERROR - label name invalid in line %d\n", line_number);
-                        errors_count++;
-                    }
-                    else
-                    {
-                        /* valid label name */
-                        if (!table) /* haven't initiated label yet */
-                        {
-                            table = init_table(current_label);
-                        }
-                        else
-                        {
-                            append_label_to_table(current_label, table);
-                        }
-                        current_label->value = DC;
-                        DC += get_data_length(data_type, data);
-                    }
-                }
-            }
-            else
-            { /* trying to save data without label to point it */
-                printf("WARNING - trying to save data without pointer to it, discarding data.");
-            }
-        }
-        else if (is_entry_or_extern(curr_word->str))
-        {
-            if (is_label_defining)
-            {
-                printf("WARNING : label is irrelevant here.");
-            }
-            if (!strcmp(".extern", curr_word->str)) /* is .extern type */
-            {
-                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
-                strcpy(data, line + curr_word->end_idx);
-                if (!table)
-                {
-                    table = init_table(NULL);
-                }
-                if (define_extern_labels(data, table))
-                {
-                    printf(" in line %d", line_number);
-                    errors_count++
-                }
-            }
-        }
-        else
-        { /* potential instruction */
-            if (is_label_defining)
-            {
-                label_word = get_next_word(line, 0);
-                if (find_label(label_word->str, table))
-                { /* label name exists */
-                    printf("ERROR : found label with name %s", label_word->str);
-                    errors_count++;
-                }
-                else
-                {
-                    L = validate_opcode(line + strlen(label_word), inst); /* validate instruction line and get number of lines or error code if invalid */
-                    if (L < 0)
-                    {                                         /* invalid instruction */
-                        printf(" in line %d\n", line_number); /* add the line number to STDOUT */
-                        errors_count++;
-                    }
-                    else
-                    {
-                        /* valid instruction */
-                        current_label = init_label(label_word->str); /* the label's name is the first word */
-                        if (!current_label)                          /* label name's invalid */
-                        {
-                            printf("ERROR - label name invalid in line %d\n", line_number);
-                            errors_count++;
-                        }
-                        else
-                        { /* label's name is valid */
-
-                            current_label->code_flag = ON;
-                            current_label->value = IC;
-                            current_label->instruction = inst;
-                            IC += L;
-                            if (!table) /* haven't initiated label yet */
-                            {
-                                table = init_table(current_label);
-                            }
-                            else
-                            {
-                                append_label_to_table(current_label, table);
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                /* instruction no label */
-                L = validate_opcode(line + strlen(label_word), inst); /* validate instruction line and get number of lines or error code if invalid */
-                if (L < 0)
-                {                                         /* invalid instruction */
-                    printf(" in line %d\n", line_number); /* add the line number to STDOUT */
-                    errors_count++;
-                }
-                else
-                { /* valid instruction */
-                    inst->value = IC;
-                    IC += L;
-                    append_instruction(inst_table, inst);
-                }
-            }
-        }
-        /* initialize for next iteration */
-
-        L = 0;
-        current_label = NULL;
-        inst = NULL;
-        data_valid = INVALID;
-        is_label_defining = OFF;
-        line_number++;
-    }
-
-    /* debugging */
-    current_label = table->head;
-    while (current_label)
-    {
-        printf("label name:%s with value:%d\n", current_label->name, current_label->value);
-        current_label = current_label->next;
-    }
-
-    /* debugging */
-
-    if (!errors_count)
-    {
-        second_run(input_filename_with_ext, inst_table, table, IC, DC);
-    }
-    else
-    {
-        printf("had errors in first run on file.\n");
-        return ERROR_CODE;
-    }
-    return NO_ERROR_CODE;
-}
-
 /* fill the unknown addresses from the first run */
-int second_run(char *filename, InstructionTable *inst_table, LabelTable *table, int IC, int DC)
+int second_run(char *filename, InstructionTable *inst_table, LabelTable *table)
 {
     Instruction *curr_inst;
     int errors_counter = 0;
@@ -321,8 +127,6 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table, 
     Word *curr_word;
     Word *label_word;
     Label *curr_label;
-    int IC = 0;
-    int L = 0;
     FILE *input;
     char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
     input = fopen(filename, "r");
@@ -340,7 +144,7 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table, 
         else if (!strcmp(".entry", curr_word->str))
         {
             label_word = get_next_word(line, curr_word->end_idx);
-            curr_label = find_label(label_word->str);
+            curr_label = find_label(label_word->str, table);
             if (!curr_label)
             { /* entry label that's not defined in file */
                 printf("ERROR - label %s is not defined in file %s\n", label_word->str, filename);
@@ -421,7 +225,7 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table, 
         }
         if (!errors_counter)
         {
-            generate_output_files();
+            /*            generate_output_files();*/
         }
         else
         {
@@ -432,6 +236,224 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table, 
     else
     {
         printf("had errors in file not generating output files\n");
+        return ERROR_CODE;
+    }
+    return NO_ERROR_CODE;
+}
+
+/* first run through the file all the instructions and labels validate them by schema provided */
+int first_run(char *filename)
+{
+    int data_type, data_valid = INVALID, is_label_defining = OFF;
+    int line_number = 1;
+    int errors_count = 0;
+    Word *curr_word;
+    Word *label_word;
+    InstructionTable *inst_table = NULL;
+    Instruction *inst;
+    LabelTable *table = NULL;
+    Label *current_label = NULL;
+    int DC = 0;
+    int L = 0;
+    int IC = 100;
+    FILE *input;
+    char *data;
+    char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
+    char *input_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
+    strcpy(input_filename_with_ext, filename);
+    strcat(input_filename_with_ext, ".am");
+    if (!input_filename_with_ext)
+    {
+        printf("Fatal: failed to allocate required space for input_filename_with_ext\n");
+        return ERROR_CODE;
+    }
+    input = fopen(input_filename_with_ext, "r");
+    while (fgets(line, MAX_LINE_LENGTH, input) != NULL)
+    {
+        curr_word = get_next_word(line, 0);
+        if (is_label(curr_word->str))
+        { /* label defining */
+            is_label_defining = ON;
+            curr_word = get_next_word(line, curr_word->end_idx);
+        }
+        if (is_data_storing(curr_word->str))
+        { /* storing data */
+            if (is_label_defining)
+            {
+                data_type = !strcmp(curr_word->str, ".data") ? DATA_DATA_TYPE : STRING_DATA_TYPE; /* could be only one of those two */
+                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
+                strcpy(data, line + curr_word->end_idx + 1);
+                data_valid = data_type == DATA_DATA_TYPE ? validate_numbers(data) : validate_string_data(data);
+
+                if (!data_valid)
+                {
+                    errors_count++;
+                    printf("ERROR - data invalid in line %d\n", line_number);
+                }
+                else
+                { /* valid data */
+                    current_label = init_label(get_next_word(line, 0)->str);
+                    if (!current_label)
+                    {
+                        printf("ERROR - label name invalid in line %d\n", line_number);
+                        errors_count++;
+                    }
+                    else
+                    {
+                        current_label->data = data;
+                        /* valid label name */
+                        if (!table) /* haven't initiated label yet */
+                        {
+                            table = init_table(current_label);
+                        }
+                        else
+                        {
+                            append_label_to_table(current_label, table);
+                        }
+                    }
+                }
+            }
+            else
+            { /* trying to save data without label to point it */
+                printf("WARNING - trying to save data without pointer to it, discarding data.");
+            }
+        }
+        else if (is_entry_or_extern(curr_word->str))
+        {
+            if (is_label_defining)
+            {
+                printf("WARNING : label is irrelevant here.");
+            }
+            if (!strcmp(".extern", curr_word->str)) /* is .extern type */
+            {
+                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
+                strcpy(data, line + curr_word->end_idx);
+                if (!table)
+                {
+                    table = init_table(NULL);
+                }
+                if (define_extern_labels(data, table))
+                {
+                    printf(" in line %d", line_number);
+                    errors_count++;
+                }
+            }
+        }
+        else
+        { /* potential instruction */
+            if (is_label_defining)
+            {
+                label_word = get_next_word(line, 0);
+                if (find_label(label_word->str, table))
+                { /* label name exists */
+                    printf("ERROR : found label with name %s", label_word->str);
+                    errors_count++;
+                }
+                else
+                {
+                    inst = init_inst();
+                    L = validate_opcode(line + strlen(label_word->str), inst); /* validate instruction line and get number of lines or error code if invalid */
+                    if (L < 0)
+                    {                                         /* invalid instruction */
+                        printf(" in line %d\n", line_number); /* add the line number to STDOUT */
+                        errors_count++;
+                        free(inst);
+                    }
+                    else
+                    {
+                        /* valid instruction */
+                        current_label = init_label(label_word->str); /* the label's name is the first word */
+                        if (!current_label)                          /* label name's invalid */
+                        {
+                            printf("ERROR - label name invalid in line %d\n", line_number);
+                            errors_count++;
+                        }
+                        else
+                        { /* label's name is valid */
+
+                            current_label->code_flag = ON;
+                            current_label->value = IC;
+                            current_label->instruction = inst;
+                            IC += L;
+                            if (!table) /* haven't initiated label yet */
+                            {
+                                table = init_table(current_label);
+                            }
+                            else
+                            {
+                                append_label_to_table(current_label, table);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                /* instruction no label */
+                inst = init_inst();
+                L = validate_opcode(line, inst); /* validate instruction line and get number of lines or error code if invalid */
+                if (L < 0)
+                {                                         /* invalid instruction */
+                    printf(" in line %d\n", line_number); /* add the line number to STDOUT */
+                    errors_count++;
+                    free(inst);
+                }
+                else
+                { /* valid instruction */
+                    inst->value = IC;
+                    IC += L;
+                    if (!inst_table)
+                    {
+                        inst_table = init_inst_table(inst_table);
+                    }
+                    append_instruction(inst_table, inst);
+                }
+            }
+        }
+        if (IC + DC > MAX_DATA_AND_INSTRUCTIONS)
+        {
+            printf("not enough space for storing all data and instructions\n");
+            errors_count++;
+        }
+        /* initialize for next iteration */
+
+        L = 0;
+        current_label = NULL;
+        inst = NULL;
+        data_valid = INVALID;
+        is_label_defining = OFF;
+        line_number++;
+    }
+
+    /* give data labels addresses after IC */
+
+    current_label = table->head;
+    while (current_label)
+    {
+        if (current_label->data_flag)
+        {
+            current_label->value = DC + IC;
+            DC += get_data_length(data_type, data);
+        }
+        current_label = current_label->next;
+    }
+    /* debugging */
+    current_label = table->head;
+    while (current_label)
+    {
+        printf("label name:%s with value:%d\n", current_label->name, current_label->value);
+        current_label = current_label->next;
+    }
+
+    /* debugging */
+
+    if (!errors_count)
+    {
+        second_run(input_filename_with_ext, inst_table, table);
+    }
+    else
+    {
+        printf("had errors in first run on file.\n");
         return ERROR_CODE;
     }
     return NO_ERROR_CODE;

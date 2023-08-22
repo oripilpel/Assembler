@@ -15,23 +15,28 @@
 #define NONE 0
 #define INVALID 0
 #define VALID 1
-
-typedef struct Word
-{
-    char *str;
-    int end_idx;
-} Word;
+#define REGISTER_TYPE 100
+#define IMMEDIATE_TYPE 1
+#define LABEL_TYPE 10
+#define MAX_NUM_VALUE_OPERATION 511
+#define MIN_NUM_VALUE_OPERATION -512
+#define MAX_NUM_VALUE 2047
+#define MIN_NUM_VALUE -2048
+#define SOURCE 1
+#define DEST 2
+#define MAX_DATA_AND_INSTRUCTIONS 924
 
 /* returns a word structure that has a pointer to the nth word in a line or null if not found and end index of current word */
 Word *get_next_word(char *line, int n)
 {
     int had_comma = OFF;
     int skipped = 0;
-    line += n;
     char *word_start;
     char *curr_word;
     size_t length = 0;
-    Word *word = (Word *)malloc(sizeof(Word));
+    Word *word;
+    line += n;
+    word = (Word *)malloc(sizeof(Word));
     if (line == NULL || *line == '\0')
     { /* string is NULL or empty return NULL */
         return NULL;
@@ -63,6 +68,10 @@ Word *get_next_word(char *line, int n)
             curr_word[length] = '\0';
             word->str = curr_word;
             word->end_idx = n + length + skipped;
+            if (!strlen(word))
+            {
+                return NULL;
+            }
             return word;
         }
     }
@@ -166,38 +175,67 @@ int is_all_space(char *start)
     return 1;
 }
 
-/* validate each number in .data data */
 int validate_number(char *number)
 {
+    char *number_start;
+    char *number_copy;
+    int num;
+
     while (isspace(*number))
     {
         number++;
     }
+
+    number_start = number;
+
     if (*number == '+' || *number == '-')
         number++; /* it could start with plus or minus sign */
-    if (!number || *number == '\0' || !strlen(number))
+
+    /* check for NULL or an empty string */
+    if (!number || *number == '\0')
         return INVALID;
+
     while (*number != '\0' && isdigit(*number))
     {
         number++;
     }
+
+    /* allocate memory for the number_copy */
+    number_copy = (char *)malloc((number - number_start + 1) * sizeof(char));
+    strncpy(number_copy, number_start, number - number_start);
+    number_copy[number - number_start] = '\0';
+
+    num = atoi(number_copy);
+
+    if (num > MAX_NUM_VALUE || num < MIN_NUM_VALUE)
+    {
+        printf("number value %d is not in allowed range\n", num); /* print the integer value */
+        free(number_copy);
+        return INVALID;
+    }
+
+    free(number_copy);
+
     while (isspace(*number))
     {
         number++;
     }
+
+    /* return 1 to indicate success (all characters were processed) */
     return *number == '\0';
 }
 
 /* validate all numbers in string */
 int validate_numbers(char *numbers)
 {
+    char *numbers_copy;
+    char *curr_num;
     if (*numbers == ',' || numbers[strlen(numbers) - 1] == ',')
         return INVALID;
-    char *numbers_copy = (char *)malloc(sizeof(char) * (strlen(numbers) + 1));
+    numbers_copy = (char *)malloc(sizeof(char) * (strlen(numbers) + 1));
     strcpy(numbers_copy, numbers);
     numbers_copy[strlen(numbers)] = '\0';
-    char *curr_num = strtok(numbers_copy, ",");
-    int data_valid = VALID;
+    curr_num = strtok(numbers_copy, ",");
     while (curr_num)
     {
         if (!validate_number(curr_num))
@@ -231,22 +269,29 @@ int is_entry_or_extern(char *word)
 int validate_string_data(char *data)
 {
     int valid = ON;
-    if (data)
+    char *data_end = data + strlen(data) - 1;
+    if (!data)
     {
-        if (data[strlen(data) - 1] != '"' || *data != '"')
-        {
+        valid = OFF;
+        printf("data is falsy");
+    }
+    while (isspace(*data_end))
+    {
+        data_end--;
+    }
+    if (*data_end != '"' || *data != '"')
+    {
+        valid = OFF;
+        printf("invalid data - data string should start and end with double quotes\n");
+    }
+    while (*data != '\0')
+    {
+        if (!is_ascii(*data))
+        { /* all chars in string must be ASCII chars */
             valid = OFF;
-            printf("ERROR - invalid data - data string should start and end with double quotes\n");
+            printf("invalid data - data string contains non ascii characters\n");
         }
-        while (*data != '\0')
-        {
-            if (!is_ascii(*data))
-            { /* all chars in string must be ASCII chars */
-                valid = OFF;
-                printf("ERROR - invalid data - data string contains non ascii characters\n");
-            }
-            data++;
-        }
+        data++;
     }
 
     return valid;
@@ -260,230 +305,6 @@ int get_data_length(int data_type, char *data)
         return strlen(data) - 1; /* minus two "" and plus one for the \0 in the end */
     }
     return count_words(data);
-}
-
-typedef struct Label
-{
-    struct Label *next;
-    char *name;
-    int value;
-    int data_flag;
-    int code_flag;
-    int external_flag;
-    int entry_flag;
-} Label;
-
-typedef struct LabelTable
-{
-    Label *head;
-} LabelTable;
-
-int is_label(char *word)
-{
-    return isalpha(*word) && !strcmp(&word[strlen(word) - 1], ":");
-}
-
-void free_label(Label *label)
-{
-    free(label->name);
-    free(label);
-}
-
-/* check validity of label name and data by type */
-int validate_label_name(char *name)
-{
-    int valid = ON;
-
-    /* validating name */
-
-    int length = 0;
-    if (!name)
-    {
-        valid = OFF;
-        printf("ERROR - invalid label name - label name is null\n");
-    }
-    while (*name != '\0')
-    {
-        if (!length && !isalpha(*name))
-        {
-            valid = OFF;
-            printf("ERROR - invalid label name - label name doesn't start with a letter\n");
-            break;
-        }
-        if (!isalpha(*name) && !isdigit(*name))
-        { /* all chars in name must be digit or letters */
-            valid = OFF;
-            printf("ERROR - invalid label name - label name contains illegal characters\n");
-            break;
-        }
-        length++;
-        name++;
-    }
-    if (length > MAX_LABEL_LENGTH)
-    {
-        valid = OFF;
-        printf("ERROR - invalid label name - label name is too long\n");
-    }
-    return valid;
-}
-
-int validate_data(char *line)
-{
-    /* check each number is continuous and line only contains numbers spaces and commas */
-    int num_flag = 0;
-    int last_non_space_idx = 0;
-    int i = 0;
-    char *line_start = line;
-    int last_comma = -2;
-    while (*line != '\0')
-    {
-        if (isspace(*line))
-        {
-            line++;
-            continue;
-        }
-        if ((num_flag && isdigit(*line)) || (!isdigit(*line) && !isspace(*line) && *line != ','))
-            return 0;
-        while (isdigit(*line))
-        {
-            num_flag = 1;
-            line++;
-        }
-        if (*line == ',')
-        {
-            num_flag = 0;
-        };
-        line++;
-    }
-
-    /* second run adjacent comma check*/
-    line = line_start;
-    while (*line != '\0')
-    {
-        if (isdigit(*line) || isalpha(*line))
-        {
-            last_non_space_idx = i;
-        }
-        else
-        {
-            if (*line == ',')
-            {
-                if (last_comma > last_non_space_idx)
-                {
-                    return 0;
-                }
-                last_comma = i;
-            }
-        }
-        line++;
-        i++;
-    }
-    return 1;
-}
-
-/* init label instance */
-Label *init_label(char *name)
-{
-    int valid_name;
-    Label *inst = (Label *)malloc(sizeof(Label));
-    char *name_copy = (char *)malloc(MAX_LABEL_LENGTH * sizeof(char));
-    strcpy(name_copy, name);
-    if (!*name_copy || !inst)
-    {
-        printf("Fatal: failed to allocate required space for the label's name\n");
-        exit(1);
-    }
-    valid_name = validate_label_name(name);
-    if (!valid_name)
-    {
-        free(inst);
-        free(name_copy);
-        return NULL; /* return the label only if it's valid */
-    }
-    inst->name = name_copy;
-    inst->next = NULL;
-    return inst;
-}
-
-/* init new label table */
-LabelTable *init_table(Label *head)
-{
-    LabelTable *table = malloc(sizeof(LabelTable));
-    table->head = head;
-    return table;
-}
-
-/* find label by name */
-Label *find_label(char *name, LabelTable *table)
-{
-    Label *current;
-    if (!table)
-        return NULL;
-    current = table->head;
-    if (!current)
-        return NULL;
-    while (current)
-    {
-        if (!strcmp(current->name, name))
-            return current;
-        current = current->next;
-    }
-    return NULL;
-}
-
-/* insert label into table only if it doesn't already exist */
-void append_label_to_table(Label *label, LabelTable *table)
-{
-    Label *current = table->head;
-    if (!table->head)
-    {
-        table->head = label;
-        return;
-    }
-    if (!table->head)
-    {
-        table->head = label;
-    }
-    while (current->next)
-    {
-        if (!strcmp(current->name, label->name))
-        {
-            printf("ERROR - there is another label with the name %s\n", label->name);
-            free_label(label); /* this label is no longer needed */
-            return;
-        }
-        current = current->next;
-    }
-    current->next = label;
-}
-
-/* define extern labels */
-void define_extern_labels(char *names, LabelTable *table, int *DC, int *errors_count)
-{
-    Label *temp;
-    Label *current_label;
-    char *name;
-    char *names_copy = (char *)malloc(MAX_LABEL_LENGTH * sizeof(char));
-    strcpy(names_copy, names);
-    name = strtok(names_copy, ",");
-    while (name != NULL)
-    {
-        current_label = init_label(name);
-        if (!current_label)
-        {
-            printf("ERROR - label '%s' was invalid\n", name);
-            errors_count++;
-            continue;
-        }
-        temp = find_label(name, table);
-        if (!temp)
-        {
-            current_label->external_flag = ON;
-            current_label->value = *DC++;
-            append_label_to_table(current_label, table);
-        }
-        name = strtok(NULL, ",");
-    }
 }
 
 typedef struct LineNode
@@ -515,8 +336,8 @@ LineNode *create_node(char *line)
     new_node = (LineNode *)malloc(sizeof(LineNode));
     if (!*line_copy || !new_node)
     {
-        printf("Fatal: failed to allocate required space\n");
-        exit(1);
+        printf("Fatal: failed to allocate required space");
+        return NULL;
     }
     if (new_node != NULL)
     {
@@ -614,6 +435,636 @@ void free_macros(MacroList *list)
     free(list);
 }
 
+typedef struct Instruction
+{
+    struct Instruction *next;
+    int value;
+    char *opname;
+    char *source_operand;
+    char *dest_operand;
+    char *opcode;
+    int source_value;
+    int dest_value;
+    int source_type;
+    int dest_type;
+} Instruction;
+
+typedef struct Label
+{
+    struct Label *next;
+    char *data;
+    char *name;
+    int value;
+    int data_flag;
+    int code_flag;
+    int external_flag;
+    int entry_flag;
+    Instruction *instruction;
+} Label;
+
+typedef struct LabelTable
+{
+    Label *head;
+} LabelTable;
+
+int is_label(char *word)
+{
+    return isalpha(*word) && !strcmp(&word[strlen(word) - 1], ":");
+}
+
+void free_label(Label *label)
+{
+    free(label->name);
+    free(label->data);
+    free(label);
+}
+
+/* check validity of label name and data by type */
+int validate_label_name(char *name)
+{
+    int valid = ON;
+
+    /* validating name */
+
+    int length = 0;
+    if (!name)
+    {
+        valid = OFF;
+        printf("invalid label name - label name is null\n");
+    }
+    while (*name != '\0')
+    {
+        if (!length && !isalpha(*name))
+        {
+            valid = OFF;
+            printf("invalid label name - label name doesn't start with a letter\n");
+            break;
+        }
+        if (!isalpha(*name) && !isdigit(*name))
+        { /* all chars in name must be digit or letters */
+            valid = OFF;
+            printf("invalid label name - label name contains illegal characters\n");
+            break;
+        }
+        length++;
+        name++;
+    }
+    if (length > MAX_LABEL_LENGTH)
+    {
+        valid = OFF;
+        printf("invalid label name - label name is too long\n");
+    }
+    return valid;
+}
+
+int validate_data(char *line)
+{
+    /* check each number is continuous and line only contains numbers spaces and commas */
+    int num_flag = 0;
+    int last_non_space_idx = 0;
+    int i = 0;
+    char *line_start = line;
+    int last_comma = -2;
+    while (*line != '\0')
+    {
+        if (isspace(*line))
+        {
+            line++;
+            continue;
+        }
+        if ((num_flag && isdigit(*line)) || (!isdigit(*line) && !isspace(*line) && *line != ','))
+            return 0;
+        while (isdigit(*line))
+        {
+            num_flag = 1;
+            line++;
+        }
+        if (*line == ',')
+        {
+            num_flag = 0;
+        };
+        line++;
+    }
+
+    /* second run adjacent comma check*/
+    line = line_start;
+    while (*line != '\0')
+    {
+        if (isdigit(*line) || isalpha(*line))
+        {
+            last_non_space_idx = i;
+        }
+        else
+        {
+            if (*line == ',')
+            {
+                if (last_comma > last_non_space_idx)
+                {
+                    return 0;
+                }
+                last_comma = i;
+            }
+        }
+        line++;
+        i++;
+    }
+    return 1;
+}
+
+/* init label instance */
+Label *init_label(char *name)
+{
+    int valid_name;
+    Label *inst = (Label *)malloc(sizeof(Label));
+    char *name_copy = (char *)malloc(strlen(name) * sizeof(char));
+    strncpy(name_copy, name, strlen(name) - 1); /* copy label's name without : in the end*/
+    name_copy[strlen(name) - 1] = '\0';
+    if (!*name_copy || !inst)
+    {
+        printf("Fatal: failed to allocate required space for the label's name\n");
+        return NULL;
+    }
+    valid_name = validate_label_name(name_copy);
+    if (!valid_name)
+    {
+        free(inst);
+        free(name_copy);
+        return NULL; /* return the label only if it's valid */
+    }
+    inst->name = name_copy;
+    inst->code_flag = OFF;
+    inst->entry_flag = OFF;
+    inst->external_flag = OFF;
+    inst->data_flag = OFF;
+    inst->next = NULL;
+    inst->instruction = NULL;
+    inst->data = NULL;
+    inst->value = OFF;
+    return inst;
+}
+
+/* init new label table */
+LabelTable *init_table(Label *head)
+{
+    LabelTable *table = malloc(sizeof(LabelTable));
+    table->head = head;
+    return table;
+}
+
+/* find label by name */
+Label *find_label(char *name, LabelTable *table)
+{
+    Label *current;
+    if (!table)
+        return NULL;
+    current = table->head;
+    if (!current)
+        return NULL;
+    while (current)
+    {
+        if (!strcmp(current->name, name))
+            return current;
+        current = current->next;
+    }
+    return NULL;
+}
+
+/* insert label into table only if it doesn't already exist */
+void append_label_to_table(Label *label, LabelTable *table)
+{
+    Label *current = table->head;
+    if (!table->head)
+    {
+        table->head = label;
+        return;
+    }
+    if (!table->head)
+    {
+        table->head = label;
+    }
+    while (current->next)
+    {
+        if (!strcmp(current->name, label->name))
+        {
+            printf("there is another label with the name %s\n", label->name);
+            free_label(label); /* this label is no longer needed */
+            return;
+        }
+        current = current->next;
+    }
+    current->next = label;
+}
+
+/* define extern labels */
+int define_extern_labels(char *names, LabelTable *table)
+{
+    Label *temp;
+    Label *current_label;
+    char *name;
+    char *names_copy = (char *)malloc(MAX_LABEL_LENGTH * sizeof(char));
+    strcpy(names_copy, names);
+
+    name = strtok(names_copy, ",");
+    while (name != NULL)
+    {
+        current_label = init_label(name);
+        if (!current_label)
+        {
+            printf("label '%s' was invalid\n", name);
+            return ERROR_CODE;
+        }
+        temp = find_label(name, table);
+        if (temp->code_flag || temp->entry_flag || temp->data_flag)
+        { /* found label with non external flag on */
+            printf("label '%s' found with non external flag on\n", name);
+            return ERROR_CODE;
+        }
+        else
+        {
+            current_label->external_flag = ON;
+            current_label->value = 1;
+            append_label_to_table(current_label, table);
+        }
+        name = strtok(NULL, ",");
+    }
+    return NO_ERROR_CODE;
+}
+
+typedef struct InstructionTable
+{
+    struct Instruction *head;
+} InstructionTable;
+
+typedef struct Operation
+{
+    char *opname;
+    int num_of_operands;
+    int source_allowed;
+    int dest_allowed;
+    char *opcode;
+} Operation;
+
+/* init instruction table */
+InstructionTable *init_inst_table(InstructionTable *table)
+{
+    table = (InstructionTable *)malloc(sizeof(InstructionTable));
+    table->head = NULL;
+    return table;
+}
+
+/* append operation to the end of operation table */
+void append_instruction(InstructionTable *table, Instruction *inst)
+{
+    Instruction *current;
+    if (!table->head) /* if table hasen't initialized yet */
+    {
+        table->head = inst;
+        return;
+    }
+    current = table->head;
+    if (!table->head)
+    {
+        table->head = inst;
+        return;
+    }
+    if (!table->head)
+    {
+        table->head = inst;
+    }
+    while (current->next)
+    {
+        current = current->next;
+    }
+    current->next = inst;
+}
+
+/* returns if the operand allows the  */
+int is_op_allowed(int operand_type, int allowed)
+{
+    if (operand_type > allowed)
+    {
+        return 0;
+    }
+    switch (operand_type)
+    {
+    case LABEL_TYPE: /* 10 */
+        if (allowed >= REGISTER_TYPE && allowed - REGISTER_TYPE < 10)
+        {
+            return 0;
+        }
+        break;
+    case IMMEDIATE_TYPE:     /* 1 */
+        return allowed % 10; /* return the reminder */
+        break;
+    }
+    return 1;
+}
+
+/* returns the expected operand type */
+int get_operand_type(char *operand)
+{
+    if (*operand == '@') /* register could start with  */
+        return REGISTER_TYPE;
+    if (isdigit(*operand) || *operand == '+' || *operand == '-') /* number could be a digit or start with plus or minus signs */
+        return IMMEDIATE_TYPE;
+    if (isalpha(*operand))
+        return LABEL_TYPE;
+    return ERROR_CODE;
+}
+
+/* validating operation line if valid returns number of words needed to code this line */
+int validate_opcode(char *line, Instruction *inst)
+{
+    int num;
+    int i = 0;
+    int op_type;
+    int num_of_operands;
+    char *opname;
+    char *first_operand, *first_ptr;
+    char *second_operand, *second_ptr;
+    Word *curr_word;
+    Operation *curr_op = NULL;
+    Operation operations[16] = {
+        {"mov", 2, 111, 110, "0000"},
+        {"cmp", 2, 111, 111, "0001"},
+        {"add", 2, 111, 110, "0010"},
+        {"sub", 2, 111, 110, "0011"},
+        {"not", 1, 0, 110, "0100"},
+        {"clr", 1, 0, 110, "0101"},
+        {"lea", 2, 10, 110, "0110"},
+        {"inc", 1, 0, 110, "0111"},
+        {"dec", 1, 0, 110, "1000"},
+        {"jmp", 1, 0, 110, "1001"},
+        {"bne", 1, 0, 110, "1010"},
+        {"red", 1, 0, 110, "1011"},
+        {"prn", 1, 0, 111, "1100"},
+        {"jsr", 1, 0, 110, "1101"},
+        {"rts", 0, 0, 0, "1110"},
+        {"stop", 0, 0, 0, "1111"}};
+    curr_word = get_next_word(line, 0);
+    opname = curr_word->str;
+
+    /* validate existance of opname */
+    for (i = 0; i < 16; i++)
+    {
+        if (!strcmp(opname, operations[i].opname))
+        {
+            curr_op = &operations[i];
+        }
+    }
+    if (!curr_op)
+    {
+        printf("ERROR - no operation name %s", opname);
+        return ERROR_CODE;
+    }
+
+    /* validate number of operands */
+    num_of_operands = count_words(line + curr_word->end_idx);
+    if (num_of_operands != curr_op->num_of_operands)
+    {
+        printf("ERROR - number of operands %d are not compatible with the operation %s", curr_op->num_of_operands, curr_op->opname);
+        return ERROR_CODE;
+    }
+
+    /* validate operands sent are allowed */
+
+    curr_word = get_next_word(line, curr_word->end_idx);
+    if (curr_word)
+    {
+        first_operand = curr_word->str;
+        first_ptr = first_operand;
+    }
+    curr_word = get_next_word(line, curr_word->end_idx);
+    if (curr_word)
+    {
+        second_operand = curr_word->str;
+        second_ptr = second_operand;
+    }
+
+    /* validate the first operand */
+    if (num_of_operands)
+    {
+        op_type = get_operand_type(first_operand);
+        switch (op_type)
+        {
+
+        case REGISTER_TYPE:
+            first_ptr++; /* skip @ */
+            /* make sure the r */
+            if (*first_ptr != 'r')
+            {
+                printf("ERROR - register name %s didn't start with r", first_operand);
+                return ERROR_CODE;
+            }
+            first_ptr++;              /* skip r */
+            if (first_ptr[1] != '\0') /* number is not between 0-9 */
+            {
+                printf("ERROR - register number is invalid %s", first_operand);
+                return ERROR_CODE;
+            }
+            num = first_operand[2] - '0'; /* convert the char to numeric */
+            if (num >= 8 || num < 0)
+            {
+                printf("ERROR - register number is invalid %d", num);
+                return ERROR_CODE;
+            }
+            break;
+        case IMMEDIATE_TYPE:
+            if (!validate_number(first_operand))
+            {
+                printf("ERROR - number has invalid chars %s", first_operand);
+                return ERROR_CODE;
+            }
+            first_operand = curr_word->str;
+            /* validate the number is in valid range and  */
+            if (MIN_NUM_VALUE_OPERATION > atoi(first_operand) || MAX_NUM_VALUE_OPERATION < atoi(first_operand))
+            {
+                printf("ERROR - number %s is not in range of allowed numbers", first_operand);
+                return ERROR_CODE;
+            }
+            break;
+        case LABEL_TYPE:
+            /* validate only if name is legal */
+            if (!validate_label_name(first_operand))
+            {
+                printf("ERROR - label name %s is inavlid", first_operand);
+                return ERROR_CODE;
+            }
+            break;
+        default: /* got ERROR code from get_operand_type */
+            printf("ERROR - unidentified operand type %s", first_operand);
+            return ERROR_CODE;
+            break;
+        }
+    }
+
+    /* validate the second operand */
+    if (num_of_operands == 2)
+    {
+        op_type = get_operand_type(second_operand);
+        switch (op_type)
+        {
+        case REGISTER_TYPE:
+            second_ptr++; /* skip @ */
+            /* make sure the r */
+            if (*second_ptr != 'r')
+            {
+                printf("ERROR - register name %s didn't start with r", second_operand);
+                return ERROR_CODE;
+            }
+            second_ptr++;              /* skip r */
+            if (second_ptr[1] != '\0') /* number is not between 0-9 */
+            {
+                printf("ERROR - register number is invalid %s", second_operand);
+                return ERROR_CODE;
+            }
+            num = second_operand[2] - '0'; /* convert the char to numeric */
+            if (num >= 8 || num < 0)
+            {
+                printf("ERROR - register number is invalid %d", num);
+                return ERROR_CODE;
+            }
+            break;
+        case IMMEDIATE_TYPE:
+            if (!validate_number(second_operand))
+            {
+                printf("ERROR - number has invalid chars %s", second_operand);
+                return ERROR_CODE;
+            }
+            second_operand = curr_word->str;
+            /* validate the number is in valid range and  */
+            if (MIN_NUM_VALUE_OPERATION > atoi(second_operand) || MAX_NUM_VALUE_OPERATION < atoi(second_operand))
+            {
+                printf("ERROR - number %s is not in range of allowed numbers", second_operand);
+                return ERROR_CODE;
+            }
+            break;
+        case LABEL_TYPE:
+            /* validate only if name is legal */
+            if (!validate_label_name(second_operand))
+            {
+                printf("ERROR - label name %s is inavlid", second_operand);
+                return ERROR_CODE;
+            }
+            break;
+        default: /* got ERROR code from get_operand_type */
+            printf("ERROR - unidentified operand type %s", second_operand);
+            return ERROR_CODE;
+        }
+    }
+
+    /* initalize instruction */
+    inst = (Instruction *)malloc(sizeof(Instruction));
+
+    if (num_of_operands == 1)
+    {
+        if (is_op_allowed(get_operand_type(first_operand), curr_op->dest_allowed))
+        {
+            inst->dest_operand = first_operand;
+            inst->dest_type = get_operand_type(first_operand);
+            inst->source_operand = NULL;
+        }
+        else
+        {
+            printf("ERROR - addressing type not allowed for this operation");
+            return ERROR_CODE;
+        }
+    }
+
+    if (num_of_operands == 2)
+    {
+        if (!is_op_allowed(get_operand_type(first_operand), curr_op->source_allowed) || !is_op_allowed(get_operand_type(second_operand), curr_op->dest_allowed))
+        {
+            printf("ERROR - addressing type not allowed for this operation");
+            return ERROR_CODE;
+        }
+        else
+        {
+            inst->source_type = get_operand_type(first_operand);
+            inst->dest_type = get_operand_type(second_operand);
+            inst->source_operand = first_operand;
+            inst->dest_operand = second_operand;
+        }
+    }
+
+    if (!num_of_operands)
+    {
+        inst->source_operand = NULL;
+        inst->dest_operand = NULL;
+        inst->source_type = 0;
+        inst->dest_type = 0;
+    }
+
+    inst->opname = curr_op->opname;
+    inst->opcode = curr_op->opcode;
+
+    /* count and return the number of lines needed based on operands */
+    switch (num_of_operands)
+    {
+    case 0:
+        return 1;
+    case 1:
+        return 2;
+    case 2:
+        if (get_operand_type(first_operand) == REGISTER_TYPE && get_operand_type(second_operand) == REGISTER_TYPE)
+        {
+            return 2;
+        }
+        return 3;
+    }
+    /* if nothing returned return error code */
+    return ERROR_CODE;
+}
+
+/*  */
+int get_operand_address(Instruction *inst, LabelTable *table, int type)
+{
+    Label *l;
+    if (type == DEST)
+    {
+        switch (inst->dest_type)
+        {
+        case REGISTER_TYPE: /* the address is the register's number */
+            return atoi(inst->dest_operand + 2);
+        case LABEL_TYPE:
+            l = find_label(inst->dest_operand, table);
+            if (!l)
+            {
+                printf("ERROR - no label found with name %s\n", inst->dest_operand);
+                return ERROR_CODE;
+            }
+            else
+            {
+                return l->value;
+            }
+        }
+        /* case IMMEDIATE_TYPE */
+        return atoi(inst->dest_operand);
+    }
+    else
+    {
+        switch (inst->source_type)
+        {
+        case REGISTER_TYPE: /* the address is the register's number */
+            return atoi(inst->source_operand + 2);
+
+        case LABEL_TYPE:
+            l = find_label(inst->source_operand, table);
+            if (!l)
+            {
+                printf("ERROR - no label found with name %s\n", inst->source_operand);
+                return ERROR_CODE;
+            }
+            else
+            {
+                return l->value;
+            }
+        }
+        /* case IMMEDIATE_TYPE */
+        return atoi(inst->source_operand);
+    }
+}
+
 /* write macro into a file */
 void write_macro(FILE *file, Macro *macro)
 {
@@ -640,7 +1091,7 @@ int macro_expansion(char *filename)
     if (!input_filename_with_ext || !output_filename_with_ext)
     {
         printf("Fatal: failed to allocate required space\n");
-        exit(1);
+        return ERROR_CODE;
     }
     strcpy(input_filename_with_ext, filename);
     strcat(input_filename_with_ext, ".as");
@@ -650,7 +1101,7 @@ int macro_expansion(char *filename)
     input = fopen(input_filename_with_ext, "r");
     if (input == NULL)
     {
-        printf("ERROR - ERROR opening input file: %s\n", input_filename_with_ext);
+        printf("ERROR opening input file: %s\n", input_filename_with_ext);
         return ERROR_CODE;
     }
 
@@ -665,7 +1116,7 @@ int macro_expansion(char *filename)
             output = fopen(output_filename_with_ext, "w");
             if (output == NULL)
             {
-                printf("ERROR - ERROR opening output file: %s\n", output_filename_with_ext);
+                printf("ERROR opening output file: %s\n", output_filename_with_ext);
                 return ERROR_CODE;
             }
         }
@@ -724,6 +1175,130 @@ int macro_expansion(char *filename)
     return NO_ERROR_CODE;
 }
 
+/* fill the unknown addresses from the first run */
+int second_run(char *filename, InstructionTable *inst_table, LabelTable *table)
+{
+    Instruction *curr_inst;
+    int errors_counter = 0;
+    int value;
+    Word *curr_word;
+    Word *label_word;
+    Label *curr_label;
+    FILE *input;
+    char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
+    input = fopen(filename, "r");
+    while (fgets(line, MAX_LINE_LENGTH, input) != NULL)
+    {
+        curr_word = get_next_word(line, 0);
+        if (is_label(curr_word->str))
+        { /* do nothing */
+            curr_word = get_next_word(line, curr_word->end_idx);
+        }
+        if (is_data_storing(curr_word->str) || !strcmp(".extern", curr_word->str))
+        { /* do nothing */
+            continue;
+        }
+        else if (!strcmp(".entry", curr_word->str))
+        {
+            label_word = get_next_word(line, curr_word->end_idx);
+            curr_label = find_label(label_word->str, table);
+            if (!curr_label)
+            { /* entry label that's not defined in file */
+                printf("ERROR - label %s is not defined in file %s\n", label_word->str, filename);
+                errors_counter++;
+            }
+            else
+            {
+                curr_label->entry_flag = ON;
+            }
+        }
+        curr_label = NULL;
+    }
+    if (!errors_counter)
+    { /* all good no errors in first run and in second run on file */
+        /* iterate through instructions and fill out missing addresses */
+        curr_inst = inst_table->head;
+        while (curr_inst)
+        {
+            if (curr_inst->source_operand)
+            {
+                value = get_operand_address(curr_inst, table, SOURCE);
+                if (value != ERROR_CODE)
+                {
+                    curr_inst->source_value = value;
+                }
+                else
+                {
+                    errors_counter++;
+                }
+            }
+            if (curr_inst->dest_operand)
+            {
+                value = get_operand_address(curr_inst, table, DEST);
+                if (value != ERROR_CODE)
+                {
+                    curr_inst->dest_value = value;
+                }
+                else
+                {
+                    errors_counter++;
+                }
+            }
+            curr_inst = curr_inst->next;
+        }
+        /* iterate through labels to fill out missing addresses */
+        curr_label = table->head;
+        while (curr_label)
+        {
+            if (curr_label->instruction)
+            {
+                curr_inst = curr_label->instruction;
+                if (curr_inst->source_operand)
+                {
+                    value = get_operand_address(curr_inst, table, SOURCE);
+                    if (value != ERROR_CODE)
+                    {
+                        curr_inst->source_value = value;
+                    }
+                    else
+                    {
+                        errors_counter++;
+                    }
+                }
+                if (curr_inst->dest_operand)
+                {
+                    value = get_operand_address(curr_inst, table, DEST);
+                    if (value != ERROR_CODE)
+                    {
+                        curr_inst->dest_value = value;
+                    }
+                    else
+                    {
+                        errors_counter++;
+                    }
+                }
+            }
+            curr_label = curr_label->next;
+        }
+        if (!errors_counter)
+        {
+            /*            generate_output_files();*/
+        }
+        else
+        {
+            printf("had errors in file not generating output files\n");
+            return ERROR_CODE;
+        }
+    }
+    else
+    {
+        printf("had errors in file not generating output files\n");
+        return ERROR_CODE;
+    }
+    return NO_ERROR_CODE;
+}
+
+/* first run through the file all the instructions and labels validate them by schema provided */
 int first_run(char *filename)
 {
     int data_type, data_valid = INVALID, is_label_defining = OFF;
@@ -731,13 +1306,15 @@ int first_run(char *filename)
     int errors_count = 0;
     Word *curr_word;
     Word *label_word;
-
+    InstructionTable *inst_table;
+    Instruction *inst;
     LabelTable *table = NULL;
     Label *current_label = NULL;
     int DC = 0;
-    int IC = 0;
+    int L = 0;
+    int IC = 100;
     FILE *input;
-    char *data, *curr_num;
+    char *data;
     char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
     char *input_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
     strcpy(input_filename_with_ext, filename);
@@ -745,7 +1322,7 @@ int first_run(char *filename)
     if (!input_filename_with_ext)
     {
         printf("Fatal: failed to allocate required space for input_filename_with_ext\n");
-        exit(1);
+        return ERROR_CODE;
     }
     input = fopen(input_filename_with_ext, "r");
     while (fgets(line, MAX_LINE_LENGTH, input) != NULL)
@@ -760,20 +1337,11 @@ int first_run(char *filename)
         { /* storing data */
             if (is_label_defining)
             {
-                data_type = !strcmp(get_next_word(line, curr_word->end_idx)->str, ".data") ? DATA_DATA_TYPE
-                                                                                           : STRING_DATA_TYPE; /* could be only one of those two */
-                if (data == DATA_DATA_TYPE)
-                {
-                    data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
-                    strcpy(data, line + curr_word->end_idx);
-                    data_valid = validate_numbers(data);
-                }
-                else /* is .string data type  */
-                {
-                    data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
-                    strcpy(data, line + curr_word->end_idx);
-                    data_valid = validate_string_data(data);
-                }
+                data_type = !strcmp(curr_word->str, ".data") ? DATA_DATA_TYPE : STRING_DATA_TYPE; /* could be only one of those two */
+                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
+                strcpy(data, line + curr_word->end_idx + 1);
+                data_valid = data_type == DATA_DATA_TYPE ? validate_numbers(data) : validate_string_data(data);
+
                 if (!data_valid)
                 {
                     errors_count++;
@@ -789,6 +1357,7 @@ int first_run(char *filename)
                     }
                     else
                     {
+                        current_label->data = data;
                         /* valid label name */
                         if (!table) /* haven't initiated label yet */
                         {
@@ -798,21 +1367,19 @@ int first_run(char *filename)
                         {
                             append_label_to_table(current_label, table);
                         }
-                        current_label->value = DC;
-                        DC += get_data_length(data_type, data);
                     }
                 }
             }
             else
             { /* trying to save data without label to point it */
-                printf("Warning - trying to save data without pointer to it, discarding data.\n");
+                printf("WARNING - trying to save data without pointer to it, discarding data.");
             }
         }
         else if (is_entry_or_extern(curr_word->str))
         {
             if (is_label_defining)
             {
-                printf("WARNING - label is irrelevant here.\n");
+                printf("WARNING : label is irrelevant here.");
             }
             if (!strcmp(".extern", curr_word->str)) /* is .extern type */
             {
@@ -822,55 +1389,138 @@ int first_run(char *filename)
                 {
                     table = init_table(NULL);
                 }
-                define_extern_labels(data, table, &DC, &errors_count);
+                if (define_extern_labels(data, table))
+                {
+                    printf(" in line %d", line_number);
+                    errors_count++;
+                }
             }
         }
         else
-        { /* instruction */
+        { /* potential instruction */
             if (is_label_defining)
             {
                 label_word = get_next_word(line, 0);
                 if (find_label(label_word->str, table))
                 { /* label name exists */
-                    printf("ERROR - found label with name %s\n", label_word->str);
+                    printf("ERROR : found label with name %s", label_word->str);
                     errors_count++;
                 }
                 else
                 {
-                    current_label = init_label(label_word->str); /* the label's name is the first word */
-                    if (!current_label)                          /* label name's invalid */
-                    {
-                        printf("ERROR - label name invalid in line %d\n", line_number);
+                    L = validate_opcode(line + strlen(label_word->str), inst); /* validate instruction line and get number of lines or error code if invalid */
+                    if (L < 0)
+                    {                                         /* invalid instruction */
+                        printf(" in line %d\n", line_number); /* add the line number to STDOUT */
                         errors_count++;
                     }
                     else
-                    { /* label's name is valid */
-                        current_label->code_flag = ON;
+                    {
+                        /* valid instruction */
+                        current_label = init_label(label_word->str); /* the label's name is the first word */
+                        if (!current_label)                          /* label name's invalid */
+                        {
+                            printf("ERROR - label name invalid in line %d\n", line_number);
+                            errors_count++;
+                        }
+                        else
+                        { /* label's name is valid */
+
+                            current_label->code_flag = ON;
+                            current_label->value = IC;
+                            current_label->instruction = inst;
+                            IC += L;
+                            if (!table) /* haven't initiated label yet */
+                            {
+                                table = init_table(current_label);
+                            }
+                            else
+                            {
+                                append_label_to_table(current_label, table);
+                            }
+                        }
                     }
                 }
             }
+            else
+            {
+                /* instruction no label */
+                L = validate_opcode(line, inst); /* validate instruction line and get number of lines or error code if invalid */
+                if (L < 0)
+                {                                         /* invalid instruction */
+                    printf(" in line %d\n", line_number); /* add the line number to STDOUT */
+                    errors_count++;
+                }
+                else
+                { /* valid instruction */
+                    inst->value = IC;
+                    IC += L;
+                    if (!inst_table)
+                    {
+                        inst_table = init_inst_table(inst_table);
+                    }
+                    append_instruction(inst_table, inst);
+                }
+            }
         }
+        if (IC + DC > MAX_DATA_AND_INSTRUCTIONS)
+        {
+            printf("not enough space for storing all data and instructions\n");
+            errors_count++;
+        }
+        /* initialize for next iteration */
+
+        L = 0;
+        current_label = NULL;
+        inst = NULL;
         data_valid = INVALID;
-        is_label_defining = OFF; /* initialize it for next iteration */
+        is_label_defining = OFF;
         line_number++;
     }
 
+    /* give data labels addresses after IC */
+
+    current_label = table->head;
+    while (current_label)
+    {
+        if (current_label->data_flag)
+        {
+            current_label->value = DC + IC;
+            DC += get_data_length(data_type, data);
+        }
+        current_label = current_label->next;
+    }
     /* debugging */
     current_label = table->head;
     while (current_label)
     {
-        printf("label name:%s\n", current_label->name);
+        printf("label name:%s with value:%d\n", current_label->name, current_label->value);
         current_label = current_label->next;
     }
 
     /* debugging */
 
-    return errors_count ? ERROR_CODE : NO_ERROR_CODE;
+    if (!errors_count)
+    {
+        second_run(input_filename_with_ext, inst_table, table);
+    }
+    else
+    {
+        printf("had errors in first run on file.\n");
+        return ERROR_CODE;
+    }
+    return NO_ERROR_CODE;
 }
 
 int main(int argc, char *argv[])
 {
-    macro_expansion("file");
-    first_run("file");
+
+    char *arr[1] = {"test"};
+    int i;
+    for (i = 0; i < 1; i++)
+    {
+        macro_expansion(arr[i]);
+        first_run(arr[i]);
+    }
     return NO_ERROR_CODE;
 }

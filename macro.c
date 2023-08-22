@@ -63,14 +63,6 @@ MacroList *init_macro_list(Macro *head)
     return inst;
 }
 
-/*  append Macro to the end of MacroList  */
-void append_macro_to_list_start(MacroList *list, Macro *new_node)
-{
-    Macro *current = list->head;
-    new_node->next = (struct Macro *)current;
-    list->head = new_node;
-}
-
 /* append line to the end of the line list */
 void append_line_to_list(Macro *macro, char *line)
 {

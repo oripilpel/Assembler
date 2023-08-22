@@ -1,10 +1,24 @@
-
 #ifndef ASSEMBLER_LABEL_H
 #define ASSEMBLER_LABEL_H
+
+typedef struct Instruction
+{
+    struct Instruction *next;
+    int value;
+    char *opname;
+    char *source_operand;
+    char *dest_operand;
+    char *opcode;
+    int source_value;
+    int dest_value;
+    int source_type;
+    int dest_type;
+} Instruction;
 
 typedef struct Label
 {
     struct Label *next;
+    char *data;               /* label data if exist */
     char *name;               /* label name */
     int value;                /* label address in memory */
     int data_flag;            /* if it contains data it's 1 else 0 */
@@ -20,8 +34,6 @@ typedef struct LabelTable
 } LabelTable;
 
 int validate_label_name(char *name);
-
-int validate_data_by_type(int data_type, char *data);
 
 Label *init_label(char *name);
 

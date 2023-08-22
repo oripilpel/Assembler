@@ -22,5 +22,6 @@
 #define MIN_NUM_VALUE -2048
 #define SOURCE 1
 #define DEST 2
+#define MAX_DATA_AND_INSTRUCTIONS 924
 
 #endif

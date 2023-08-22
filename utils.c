@@ -15,11 +15,12 @@ Word *get_next_word(char *line, int n)
 {
     int had_comma = OFF;
     int skipped = 0;
-    line += n;
     char *word_start;
     char *curr_word;
     size_t length = 0;
-    Word *word = (Word *)malloc(sizeof(Word));
+    Word *word;
+    line += n;
+    word = (Word *)malloc(sizeof(Word));
     if (line == NULL || *line == '\0')
     { /* string is NULL or empty return NULL */
         return NULL;
@@ -45,6 +46,10 @@ Word *get_next_word(char *line, int n)
             {
                 line++;
                 length++;
+            }
+            if (!length)
+            {
+                return NULL;
             }
             curr_word = (char *)malloc(sizeof(char) * (length + 1)); /* allocate memory for nth word */
             strncpy(curr_word, word_start, length);
@@ -154,53 +159,67 @@ int is_all_space(char *start)
     return 1;
 }
 
-/* validate each number in .data data */
 int validate_number(char *number)
 {
     char *number_start;
     char *number_copy;
-    int number;
+    int num;
+
     while (isspace(*number))
     {
         number++;
     }
+
     number_start = number;
+
     if (*number == '+' || *number == '-')
         number++; /* it could start with plus or minus sign */
-    if (!number || *number == '\0' || !strlen(number))
+
+    /* check for NULL or an empty string */
+    if (!number || *number == '\0')
         return INVALID;
+
     while (*number != '\0' && isdigit(*number))
     {
         number++;
     }
-    number_copy = (char *)malloc((number - number_copy + 1) * sizeof(char));
-    strncmp(number_copy, number, number - number_copy);
-    number_copy[strlen(number_copy)] = '\0';
-    number = atoi(number_copy);
-    if (number > MAX_NUM_VALUE || number < MIN_NUM_VALUE)
+
+    /* allocate memory for the number_copy */
+    number_copy = (char *)malloc((number - number_start + 1) * sizeof(char));
+    strncpy(number_copy, number_start, number - number_start);
+    number_copy[number - number_start] = '\0';
+
+    num = atoi(number_copy);
+
+    if (num > MAX_NUM_VALUE || num < MIN_NUM_VALUE)
     {
-        printf("number value %s is not in allowed range", number_copy);
+        printf("number value %d is not in allowed range\n", num); /* print the integer value */
         free(number_copy);
         return INVALID;
     }
+
     free(number_copy);
+
     while (isspace(*number))
     {
         number++;
     }
+
+    /* return 1 to indicate success (all characters were processed) */
     return *number == '\0';
 }
 
 /* validate all numbers in string */
 int validate_numbers(char *numbers)
 {
+    char *numbers_copy;
+    char *curr_num;
     if (*numbers == ',' || numbers[strlen(numbers) - 1] == ',')
         return INVALID;
-    char *numbers_copy = (char *)malloc(sizeof(char) * (strlen(numbers) + 1));
+    numbers_copy = (char *)malloc(sizeof(char) * (strlen(numbers) + 1));
     strcpy(numbers_copy, numbers);
     numbers_copy[strlen(numbers)] = '\0';
-    char *curr_num = strtok(numbers_copy, ",");
-    int data_valid = VALID;
+    curr_num = strtok(numbers_copy, ",");
     while (curr_num)
     {
         if (!validate_number(curr_num))
