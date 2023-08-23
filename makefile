@@ -11,4 +11,4 @@ macro.o: macro.c constants.h utils.o
 utils.o: utils.c constants.h
 	gcc -g -ansi -Wall -pedantic -c utils.c -o utils.o
 operation.o: operation.c label.o constants.h
-	gcc -g -ansi -Wall -pedantic -c operation.c label.o -o operation.o
+	gcc -g -ansi -Wall -pedantic -c operation.c -o operation.o

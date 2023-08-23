@@ -11,7 +11,7 @@ Word *get_next_word(char *line, int n);
 
 char *get_nth_word(char *line, int n);
 
-char count_words(char *line);
+int count_words(char *line);
 
 int is_all_space(char *start);
 

@@ -1,24 +1,27 @@
 #ifndef ASSEMBLER_MACRO_H
 #define ASSEMBLER_MACRO_H
 
-typedef struct {
+typedef struct
+{
     struct Macro *head;
-    int length;
 } MacroList;
 
-typedef struct {
+typedef struct
+{
     const char *name;
     struct LineNode *lines_head;
     struct Macro *next;
-    int length;
 } Macro;
 
-typedef struct LineNode {
+typedef struct LineNode
+{
     const char *line;
     struct LineNode *next;
 } LineNode;
 
 LineNode *create_node(char *line);
+
+void append_macro_to_list(MacroList *list, Macro *macro);
 
 Macro *init_macro(char *name);
 
@@ -29,6 +32,5 @@ void append_line_to_list(Macro *head, char *line);
 Macro *find_macro_in_list(MacroList *list, char *name);
 
 void free_macros(MacroList *list);
-
 
 #endif

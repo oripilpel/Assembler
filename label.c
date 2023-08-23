@@ -24,7 +24,7 @@ typedef struct Label
     char *data;
     char *name;
     int value;
-    int data_flag;
+    int data_type;
     int code_flag;
     int external_flag;
     int entry_flag;
@@ -164,7 +164,7 @@ Label *init_label(char *name)
     inst->code_flag = OFF;
     inst->entry_flag = OFF;
     inst->external_flag = OFF;
-    inst->data_flag = OFF;
+    inst->data_type = OFF;
     inst->next = NULL;
     inst->instruction = NULL;
     inst->data = NULL;
@@ -243,7 +243,7 @@ int define_extern_labels(char *names, LabelTable *table)
             return ERROR_CODE;
         }
         temp = find_label(name, table);
-        if (temp->code_flag || temp->entry_flag || temp->data_flag)
+        if (temp->code_flag || temp->entry_flag || temp->data_type)
         { /* found label with non external flag on */
             printf("label '%s' found with non external flag on\n", name);
             return ERROR_CODE;

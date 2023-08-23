@@ -109,7 +109,7 @@ char *get_nth_word(char *line, int n)
 }
 
 /* count the words seperated by commas and ignores whitespaces */
-char count_words(char *line)
+int count_words(char *line)
 {
     int added_in_curr_iteration = OFF; /* indicator if added 1 to word count in the current iteration */
     int word_count = 0;
@@ -284,9 +284,15 @@ int validate_string_data(char *data)
 /* returns data length */
 int get_data_length(int data_type, char *data)
 {
+    char *str_end;
+    str_end = data + strlen(data) - 1;
     if (data_type == STRING_DATA_TYPE)
     {
-        return strlen(data) - 1; /* minus two "" and plus one for the \0 in the end */
+        while (isspace(*str_end))
+        {
+            str_end--;
+        }
+        return str_end - data;
     }
     return count_words(data);
 }

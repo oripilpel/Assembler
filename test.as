@@ -13,6 +13,7 @@ bne LOOP
 m1
 L1: inc K
 bne LOOP
+m2
 END: stop
 STR: .string "abcdef"
 LENGTH: .data 6,-9,15

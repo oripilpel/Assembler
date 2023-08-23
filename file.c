@@ -24,9 +24,9 @@ int macro_expansion(char *filename)
 {
     int is_macro = OFF;
     char *first_word;
-    Macro *current_macro;
+    Macro *current_macro = NULL;
     MacroList *list = NULL;
-    FILE *input;
+    FILE *input = NULL;
     FILE *output = NULL;
     char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
     char *input_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
@@ -85,10 +85,14 @@ int macro_expansion(char *filename)
             {
                 /* define new macro */
                 is_macro = ON;
+                current_macro = init_macro(get_nth_word(line, 2));
                 if (!list)
                 {
-                    current_macro = init_macro(get_nth_word(line, 2));
                     list = init_macro_list(current_macro);
+                }
+                else
+                {
+                    append_macro_to_list(list, current_macro);
                 }
             }
             else
@@ -301,6 +305,7 @@ int first_run(char *filename)
                     else
                     {
                         current_label->data = data;
+                        current_label->data_type = data_type;
                         /* valid label name */
                         if (!table) /* haven't initiated label yet */
                         {
@@ -430,10 +435,10 @@ int first_run(char *filename)
     current_label = table->head;
     while (current_label)
     {
-        if (current_label->data_flag)
+        if (current_label->data_type)
         {
             current_label->value = DC + IC;
-            DC += get_data_length(data_type, data);
+            DC += get_data_length(current_label->data_type, current_label->data);
         }
         current_label = current_label->next;
     }

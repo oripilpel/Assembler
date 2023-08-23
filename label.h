@@ -21,7 +21,7 @@ typedef struct Label
     char *data;               /* label data if exist */
     char *name;               /* label name */
     int value;                /* label address in memory */
-    int data_flag;            /* if it contains data it's 1 else 0 */
+    int data_type;            /* if it contains data it's 1 else 0 */
     int code_flag;            /* if it contains instruction it's 1 else 0 */
     int external_flag;        /* if it external label it's 1 else 0 */
     int entry_flag;           /* if it external label it's 1 else 0 */

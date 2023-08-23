@@ -14,13 +14,11 @@ typedef struct
     const char *name;
     LineNode *lines_head;
     struct Macro *next;
-    int length;
 } Macro;
 
 typedef struct
 {
     Macro *head;
-    int length;
 } MacroList;
 
 /* create new LineNode  */
@@ -49,7 +47,6 @@ Macro *init_macro(char *name)
     Macro *inst = (Macro *)malloc(sizeof(Macro));
     inst->name = name;
     inst->lines_head = NULL;
-    inst->length = 0;
     inst->next = NULL;
     return inst;
 }
@@ -59,7 +56,6 @@ MacroList *init_macro_list(Macro *head)
 {
     MacroList *inst = (MacroList *)malloc(sizeof(MacroList));
     inst->head = head;
-    inst->length = 1;
     return inst;
 }
 
@@ -83,12 +79,38 @@ void append_line_to_list(Macro *macro, char *line)
     }
 }
 
+/* append macro to the end of the list */
+void append_macro_to_list(MacroList *list, Macro *macro)
+{
+    Macro *current;
+    if (!list->head)
+    {
+        /* the list is empty, so set the head to the new macro */
+        list->head = macro;
+        macro->next = NULL;
+    }
+    else
+    {
+        /* traverse the list to find the last element */
+        current = list->head;
+        while (current->next)
+        {
+            current = (Macro *)current->next;
+        }
+        /* append the new macro to the end */
+        current->next = (struct Macro *)macro;
+        macro->next = NULL; /* ensure the new macro becomes the last element */
+    }
+}
+
 /* find specific macro by name in macro list */
 Macro *find_macro_in_list(MacroList *list, const char *name)
 {
     Macro *current;
     if (!list)
+    {
         return NULL;
+    }
     current = list->head;
     while (current)
     {
