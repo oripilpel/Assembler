@@ -128,8 +128,18 @@ void free_macros(MacroList *list)
 {
     Macro *next_macro;
     LineNode *next_line;
-    Macro *current_macro = list->head;
-    LineNode *current_line = current_macro->lines_head;
+    Macro *current_macro;
+    LineNode *current_line;
+    if (!list)
+    {
+        return;
+    }
+    if (!list->head)
+    {
+        return;
+    }
+    current_macro = list->head;
+    current_line = current_macro->lines_head;
     while (current_macro)
     {
         while (current_line)

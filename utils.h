@@ -35,4 +35,6 @@ void init_string(char *s);
 
 char *ascii_char_to_binary(char ascii_char);
 
+void free_word(Word *word);
+
 #endif

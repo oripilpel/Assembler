@@ -47,4 +47,8 @@ int define_extern_labels(char *names, LabelTable *table);
 
 void append_label_to_table(Label *label, LabelTable *table);
 
+void free_labels(LabelTable *table);
+
+void free_label(Label *label);
+
 #endif
