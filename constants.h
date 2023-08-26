@@ -13,9 +13,9 @@
 #define NONE 0
 #define INVALID 0
 #define VALID 1
-#define REGISTER_TYPE 100
 #define IMMEDIATE_TYPE 1
 #define LABEL_TYPE 10
+#define REGISTER_TYPE 100
 #define MAX_NUM_VALUE_OPERATION 511
 #define MIN_NUM_VALUE_OPERATION -512
 #define MAX_NUM_VALUE 2047
@@ -23,5 +23,7 @@
 #define SOURCE 1
 #define DEST 2
 #define MAX_DATA_AND_INSTRUCTIONS 924
+#define OUTPUT_LINE_LENGTH 13
+
 
 #endif

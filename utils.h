@@ -29,4 +29,10 @@ int validate_string_data(char *data);
 
 int get_data_length(int data_type, char *data);
 
+char *int_to_binary_string(int number, int num_bits);
+
+void init_string(char *s);
+
+char *ascii_char_to_binary(char ascii_char);
+
 #endif

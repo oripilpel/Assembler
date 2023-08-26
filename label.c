@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "constants.h"
+#include "utils.h"
 
 typedef struct Instruction
 {
@@ -227,34 +228,44 @@ void append_label_to_table(Label *label, LabelTable *table)
 /* define extern labels */
 int define_extern_labels(char *names, LabelTable *table)
 {
-    Label *temp;
-    Label *current_label;
+    int i = 0;
+    Word *word;
+    Label *curr_label, *temp;
     char *name;
-    char *names_copy = (char *)malloc(MAX_LABEL_LENGTH * sizeof(char));
-    strcpy(names_copy, names);
-
-    name = strtok(names_copy, ",");
-    while (name != NULL)
+    int len;
+    word = get_next_word(names, 0);
+    while (word)
     {
-        current_label = init_label(name);
-        if (!current_label)
+
+        len = strlen(word->str);
+        name = (char *)malloc((len + 2) * sizeof(char));
+        while (i < len)
+        {
+            name[i] = word->str[i];
+            i++;
+        }
+        name[len] = ':';
+        name[len + 1] = '\0';
+
+        curr_label = init_label(name);
+        if (!curr_label)
         {
             printf("label '%s' was invalid\n", name);
             return ERROR_CODE;
         }
         temp = find_label(name, table);
-        if (temp->code_flag || temp->entry_flag || temp->data_type)
+        if (temp && (temp->code_flag || temp->entry_flag || temp->data_type))
         { /* found label with non external flag on */
             printf("label '%s' found with non external flag on\n", name);
             return ERROR_CODE;
         }
         else
         {
-            current_label->external_flag = ON;
-            current_label->value = 1;
-            append_label_to_table(current_label, table);
+            curr_label->external_flag = ON;
+            curr_label->value = 1;
+            append_label_to_table(curr_label, table);
         }
-        name = strtok(NULL, ",");
+        word = get_next_word(names, word->end_idx);
     }
     return NO_ERROR_CODE;
 }

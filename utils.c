@@ -296,3 +296,54 @@ int get_data_length(int data_type, char *data)
     }
     return count_words(data);
 }
+
+/* initialize string with zeros */
+void init_string(char *s)
+{
+    int i = 0;
+
+    while (i < OUTPUT_LINE_LENGTH - 1)
+    {
+        s[i] = '0';
+        i++;
+    }
+    s[OUTPUT_LINE_LENGTH - 1] = '\0';
+}
+
+/* returns ascii char converted to binary */
+char *ascii_char_to_binary(char ascii_char)
+{
+    char *binary;
+    int i;
+    int ascii_value = (int)ascii_char;
+    binary = (char *)malloc(8 + 1);
+
+    for (i = 7; i >= 0; i--)
+    {
+        binary[7 - i] = ((ascii_value >> i) & 1) + '0';
+    }
+    binary[8] = '\0';
+
+    return binary;
+}
+
+/* returns the value converted to binary */
+char *int_to_binary_string(int number, int num_bits)
+{
+    char *binary;
+    int i;
+    binary = (char *)malloc(num_bits + 1);
+
+    if (number < 0)
+    {
+        number = (1 << num_bits) + number;
+    }
+
+    for (i = num_bits - 1; i >= 0; i--)
+    {
+        binary[num_bits - 1 - i] = ((number >> i) & 1) + '0';
+    }
+    binary[num_bits] = '\0';
+
+    return binary;
+}

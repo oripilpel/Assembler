@@ -8,6 +8,281 @@
 #include "utils.h"
 #include "operation.h"
 
+void write_line(char *line, int counter, FILE *output)
+{
+    fprintf(output, "%s\t\t%d\n", line, counter);
+}
+
+/* write instruction data to file  */
+void handle_instruction(Instruction *inst, int *counter, FILE *output)
+{
+    printf("handle_instruction\n");
+    int i;
+    /* write first line */
+    char *binary_value;
+    char *curr_line;
+    curr_line = (char *)malloc(OUTPUT_LINE_LENGTH * sizeof(char));
+    init_string(curr_line);
+    switch (inst->source_type)
+    {
+    case IMMEDIATE_TYPE:
+        curr_line[2] = '1';
+        break;
+    case LABEL_TYPE:
+        curr_line[2] = '1';
+        curr_line[1] = '1';
+        break;
+    case REGISTER_TYPE:
+        curr_line[2] = '1';
+        curr_line[0] = '1';
+        break;
+    }
+    curr_line[3] = inst->opcode[0];
+    curr_line[4] = inst->opcode[1];
+    curr_line[5] = inst->opcode[2];
+    curr_line[6] = inst->opcode[3];
+    switch (inst->dest_type)
+    {
+    case IMMEDIATE_TYPE:
+        curr_line[9] = '1';
+        break;
+    case LABEL_TYPE:
+        curr_line[9] = '1';
+        curr_line[8] = '1';
+        break;
+    case REGISTER_TYPE:
+        curr_line[9] = '1';
+        curr_line[7] = '1';
+        break;
+    }
+    printf("\nCURR LINE:%s\n", curr_line);
+    write_line(curr_line, (*counter)++, output);
+    init_string(curr_line);
+
+    /* if only one operand */
+    if (inst->dest_operand && !inst->source_operand)
+    {
+        i = 0;
+        if (inst->dest_type == REGISTER_TYPE)
+        {
+            binary_value = int_to_binary_string(inst->dest_value, 5);
+            while (i < 5)
+            {
+                curr_line[i + 5] = binary_value[i];
+                i++;
+            }
+        }
+        else
+        {
+            if (inst->dest_type == LABEL_TYPE && inst->dest_value != 1)
+            {
+                curr_line[10] = '1';
+            }
+            binary_value = int_to_binary_string(inst->dest_value, 10);
+            while (i < 10)
+            {
+                curr_line[i] = binary_value[i];
+                i++;
+            }
+        }
+        printf("\nCURR LINE:%s\n", curr_line);
+        write_line(curr_line, (*counter)++, output);
+        init_string(curr_line);
+    }
+
+    /* code two operands */
+    if (inst->dest_operand && inst->source_operand)
+    {
+        printf("two operands\n");
+        i = 0;
+        if (inst->dest_type == REGISTER_TYPE && inst->source_type == REGISTER_TYPE)
+        {
+            binary_value = int_to_binary_string(inst->source_value, 5);
+            while (i < 5)
+            {
+                curr_line[i + 2] = binary_value[i];
+                i++;
+            }
+            binary_value = int_to_binary_string(inst->dest_value, 5);
+            while (i < 5)
+            {
+                curr_line[i + 7] = binary_value[i];
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+            init_string(curr_line);
+            return;
+        }
+        if (inst->source_type == REGISTER_TYPE)
+        {
+            binary_value = int_to_binary_string(inst->source_value, 5);
+            while (i < 5)
+            {
+                curr_line[i] = binary_value[i];
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+            init_string(curr_line);
+        }
+        else
+        {
+            if (inst->dest_type == LABEL_TYPE && inst->dest_value != 1)
+            {
+                curr_line[10] = '1';
+            }
+            binary_value = int_to_binary_string(inst->source_value, 10);
+            while (i < 10)
+            {
+                curr_line[i] = binary_value[i];
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+            init_string(curr_line);
+        }
+        if (inst->dest_type == REGISTER_TYPE)
+        {
+            binary_value = int_to_binary_string(inst->source_value, 5);
+            while (i < 5)
+            {
+                curr_line[i + 5] = binary_value[i];
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+            init_string(curr_line);
+        }
+        else
+        {
+            if (inst->dest_type == LABEL_TYPE && inst->dest_value != 1)
+            {
+                curr_line[10] = '1';
+            }
+            binary_value = int_to_binary_string(inst->dest_value, 10);
+            while (i < 10)
+            {
+                curr_line[i] = binary_value[i];
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+            init_string(curr_line);
+        }
+    }
+}
+
+/* write label data to file  */
+void handle_label(Label *label, int *counter, FILE *output)
+{
+    printf("handle_label\n");
+    Word *word = NULL;
+    int i = 0, j = 0;
+    int len = 0;
+    char *binary_value;
+    char *curr_line;
+    char *pointer;
+    curr_line = (char *)malloc(OUTPUT_LINE_LENGTH * sizeof(char));
+    init_string(curr_line);
+
+    if (label->data_type)
+    {
+        if (label->data_type == DATA_DATA_TYPE)
+        {
+            word = get_next_word(label->data, 0);
+            while (word)
+            {
+                binary_value = int_to_binary_string(atoi(word->str), 10);
+                i = 0;
+                while (i < 10)
+                {
+                    curr_line[i + 2] = binary_value[i];
+                    i++;
+                }
+                printf("\nCURR LINE:%s\n", curr_line);
+                write_line(curr_line, (*counter)++, output);
+                init_string(curr_line);
+                word = get_next_word(label->data, word->end_idx);
+            }
+        }
+        else
+        {
+            len = strlen(label->data);
+            pointer = label->data + 1; /* skip " */
+            while (i < len)
+            {
+                if (*pointer == '"' || *pointer == '\n' || *pointer == '\t')
+                {
+                    pointer++;
+                    continue;
+                }
+
+                j = 0;
+                binary_value = ascii_char_to_binary(*pointer);
+                while (j < 10)
+                {
+                    curr_line[j + 2] = binary_value[j];
+                    j++;
+                }
+                printf("\nCURR LINE:%s\n", curr_line);
+                write_line(curr_line, (*counter)++, output);
+                init_string(curr_line);
+                i++;
+            }
+            printf("\nCURR LINE:%s\n", curr_line);
+            write_line(curr_line, (*counter)++, output);
+        }
+    }
+    else if (label->code_flag)
+    {
+        handle_instruction(label->instruction, counter, output);
+    }
+}
+
+/* generate output files if had no errors in files */
+void generate_output_files(char *filename, InstructionTable *inst_table, LabelTable *table, int IC, int DC)
+{
+    FILE *output;
+    Instruction *inst = NULL;
+    Label *label = NULL;
+    char *object_filename_with_ext;
+    int counter = 100; /* first address */
+    inst = inst_table->head;
+    label = table->head;
+    object_filename_with_ext = (char *)malloc(MAX_FILE_NAME_LENGTH * sizeof(char));
+    strcpy(object_filename_with_ext, filename);
+    strcat(object_filename_with_ext, ".object");
+    output = fopen(object_filename_with_ext, "w");
+    while (inst && label)
+    {
+        if (inst->value > label->value)
+        {
+            printf("handling label : %s\n", label->name);
+            handle_label(label, &counter, output);
+            label = label->next;
+        }
+        else
+        {
+            printf("handling instruction : %s\n", inst->opname);
+            handle_instruction(inst, &counter, output);
+            inst = inst->next;
+        }
+    }
+    while (inst)
+    {
+        printf("handling instruction : %s\n", inst->opname);
+        handle_instruction(inst, &counter, output);
+        inst = inst->next;
+    }
+    while (label)
+    {
+        printf("handling label : %s\n", label->name);
+        handle_label(label, &counter, output);
+        label = label->next;
+    }
+}
+
 /* write macro into a file */
 void write_macro(FILE *file, Macro *macro)
 {
@@ -123,7 +398,7 @@ int macro_expansion(char *filename)
 }
 
 /* fill the unknown addresses from the first run */
-int second_run(char *filename, InstructionTable *inst_table, LabelTable *table)
+int second_run(char *filename, char *filename_with_ext, InstructionTable *inst_table, LabelTable *table, int IC, int DC)
 {
     Instruction *curr_inst;
     int errors_counter = 0;
@@ -133,7 +408,7 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table)
     Label *curr_label;
     FILE *input;
     char *line = (char *)malloc(MAX_LINE_LENGTH * sizeof(char));
-    input = fopen(filename, "r");
+    input = fopen(filename_with_ext, "r");
     while (fgets(line, MAX_LINE_LENGTH, input) != NULL)
     {
         curr_word = get_next_word(line, 0);
@@ -229,7 +504,7 @@ int second_run(char *filename, InstructionTable *inst_table, LabelTable *table)
         }
         if (!errors_counter)
         {
-            /*            generate_output_files();*/
+            generate_output_files(filename, inst_table, table, IC, DC);
         }
         else
         {
@@ -331,8 +606,8 @@ int first_run(char *filename)
             }
             if (!strcmp(".extern", curr_word->str)) /* is .extern type */
             {
-                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx + 1));
-                strcpy(data, line + curr_word->end_idx);
+                data = (char *)malloc(sizeof(char) * (strlen(line) - curr_word->end_idx));
+                strcpy(data, line + curr_word->end_idx + 1);
                 if (!table)
                 {
                     table = init_table(NULL);
@@ -442,19 +717,10 @@ int first_run(char *filename)
         }
         current_label = current_label->next;
     }
-    /* debugging */
-    current_label = table->head;
-    while (current_label)
-    {
-        printf("label name:%s with value:%d\n", current_label->name, current_label->value);
-        current_label = current_label->next;
-    }
-
-    /* debugging */
 
     if (!errors_count)
     {
-        second_run(input_filename_with_ext, inst_table, table);
+        second_run(filename, input_filename_with_ext, inst_table, table, IC, DC);
     }
     else
     {
