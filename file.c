@@ -423,6 +423,8 @@ void generate_ent_ext_files(char *filename, InstructionTable *inst_table, LabelT
 
         label = label->next;
     }
+    free(filename_ent);
+    free(filename_ext);
 }
 
 /* generate output files if had no errors in files */
@@ -476,6 +478,8 @@ void generate_object_files(char *filename, InstructionTable *inst_table, LabelTa
         handle_label(label, &counter, object_output, ob_output);
         label = label->next;
     }
+    free(object_filename_with_ext);
+    free(ob_filename_with_ext);
 }
 
 /* write macro into a file */
@@ -701,6 +705,9 @@ int second_run(char *filename, char *filename_with_ext, InstructionTable *inst_t
         {
             generate_object_files(filename, inst_table, table);
             generate_ent_ext_files(filename, inst_table, table);
+            /* free(filename);*/
+            /*free_labels(table);*/
+            /* free_instructions(inst_table);*/
         }
         else
         {
@@ -714,11 +721,11 @@ int second_run(char *filename, char *filename_with_ext, InstructionTable *inst_t
         return ERROR_CODE;
     }
     return NO_ERROR_CODE;
-    /*  fclose(input);*/
-    /*  free(line);*/
-    /*  free_word(curr_word);*/
+    fclose(input);
+    /* free(line);*/
+    /* free_word(curr_word);*/
     /* free_word(label_word);*/
-    /* free_label(curr_label);*/
+    /*free_label(curr_label);*/
 }
 
 /* first run through the file all the instructions and labels validate them by schema provided */
@@ -839,7 +846,7 @@ int first_run(char *filename)
                     {                                         /* invalid instruction */
                         printf(" in line %d\n", line_number); /* add the line number to STDOUT */
                         errors_count++;
-                        free(inst);
+                        free_instruction(inst);
                     }
                     else
                     {
@@ -878,7 +885,7 @@ int first_run(char *filename)
                 {                                         /* invalid instruction */
                     printf(" in line %d\n", line_number); /* add the line number to STDOUT */
                     errors_count++;
-                    free(inst);
+                    free_instruction(inst);
                 }
                 else
                 { /* valid instruction */

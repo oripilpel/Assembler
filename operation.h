@@ -6,6 +6,10 @@ typedef struct InstructionTable
     Instruction *head; /* the first instruction in linked list */
 } InstructionTable;
 
+void free_instruction(Instruction *inst);
+
+void free_instructions(InstructionTable *inst_table);
+
 int validate_opcode(char *line, Instruction *inst);
 
 void append_instruction(InstructionTable *table, Instruction *inst);

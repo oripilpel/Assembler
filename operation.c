@@ -20,6 +20,32 @@ typedef struct Operation
     char *opcode;
 } Operation;
 
+/* free instruction memory */
+void free_instruction(Instruction *inst)
+{
+    free(inst->dest_operand);
+    free(inst->source_operand);
+    free(inst->opcode);
+    free(inst);
+}
+
+/* free instruction table */
+void free_instructions(InstructionTable *inst_table)
+{
+    Instruction *curr, *prev;
+    if (inst_table)
+    {
+        curr = inst_table->head;
+        while (curr)
+        {
+            prev = curr;
+            curr = curr->next;
+            free_instruction(prev);
+        }
+        free(inst_table);
+    }
+}
+
 /* init instruction table */
 InstructionTable *init_inst_table(InstructionTable *table)
 {

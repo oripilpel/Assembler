@@ -49,6 +49,22 @@ void free_label(Label *label)
     free(label);
 }
 
+void free_labels(LabelTable *table)
+{
+    Label *n = NULL;
+    Label *l = NULL;
+    if (table)
+    {
+        while (l)
+        {
+            n = l->next;
+            free_label(l);
+            l = n;
+        }
+        free(table);
+    }
+}
+
 /* check validity of label name and data by type */
 int validate_label_name(char *name)
 {

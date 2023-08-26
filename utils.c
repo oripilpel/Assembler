@@ -10,6 +10,12 @@ typedef struct Word
     int end_idx;
 } Word;
 
+void free_word(Word *word)
+{
+    free(word->str);
+    free(word);
+}
+
 /* returns a word structure that has a pointer to the nth word in a line or null if not found and end index of current word */
 Word *get_next_word(char *line, int n)
 {
